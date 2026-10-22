@@ -20,18 +20,18 @@ const ITERATIONS = [
 
 describe('listProjects', () => {
 	const routes = {
-		'/repos/acme/design/contents/projects/alpha*': [
+		'/repos/acme/design/contents/prototypes/alpha*': [
 			{ type: 'file', name: 'brief.md' },
 			{ type: 'file', name: 'work.json' },
 			{ type: 'file', name: 'review.md' },
 		],
-		'/repos/acme/design/contents/projects*': [
+		'/repos/acme/design/contents/prototypes*': [
 			{ type: 'dir', name: 'alpha' },
 			{ type: 'file', name: 'README.md' },
 			{ type: 'dir', name: '_template' },
 		],
-		'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64('# Inactive users\n') },
-		'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
+		'/repos/acme/design/contents/prototypes/alpha/brief.md*': { sha: 'f1', content: b64('# Inactive users\n') },
+		'/repos/acme/design/contents/prototypes/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
 		// Three comments in the thread, one of them resolved: two are open.
 		'/repos/acme/design/issues?state=all*': [
 			{ number: 7, state: 'open', comments: 3, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
@@ -46,7 +46,7 @@ describe('listProjects', () => {
 	it('reads when each version was started from its record, and treats anything else as unknown', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/work.json*': {
+			'/repos/acme/design/contents/prototypes/alpha/work.json*': {
 				sha: 'f1',
 				content: b64(JSON.stringify([...ITERATIONS.slice(0, 2).map((i, n) => ({ ...i, createdAt: n === 0 ? '2026-10-01T00:00:00Z' : 'someday' }))])),
 			},
@@ -61,7 +61,7 @@ describe('listProjects', () => {
 	it('reads which picture each prototype has from its record, and nothing that is not one', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/work.json*': {
+			'/repos/acme/design/contents/prototypes/alpha/work.json*': {
 				sha: 'f1',
 				content: b64(
 					JSON.stringify([
@@ -80,12 +80,12 @@ describe('listProjects', () => {
 			{ commit: { author: { name: 'Noah' }, committer: { date: '2026-10-06T12:00:00Z' } } },
 			{ commit: { author: { name: 'Pat' }, committer: { date: '2026-10-02T12:00:00Z' } } },
 		];
-		const later = fakeGitHub({ ...routes, '/repos/acme/design/commits?path=projects%2Falpha*': commits });
+		const later = fakeGitHub({ ...routes, '/repos/acme/design/commits?path=prototypes%2Falpha*': commits });
 		expect((await new DesignRepo(later.github, REF).listProjects())[0]?.updatedAt).toBe('2026-10-06T12:00:00Z');
 		// A comment made after: GitHub dates the thread by its latest comment.
 		const commented = fakeGitHub({
 			...routes,
-			'/repos/acme/design/commits?path=projects%2Falpha*': commits,
+			'/repos/acme/design/commits?path=prototypes%2Falpha*': commits,
 			'/repos/acme/design/issues?state=all*': [
 				{ number: 7, comments: 3, updated_at: '2026-10-08T08:00:00Z', body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
 			],
@@ -96,7 +96,7 @@ describe('listProjects', () => {
 	it('has no date for activity it cannot read, and does not fail the list for it', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/commits?path=projects%2Falpha*': () => {
+			'/repos/acme/design/commits?path=prototypes%2Falpha*': () => {
 				throw new Error('rate limited');
 			},
 		});
@@ -115,7 +115,7 @@ describe('listProjects', () => {
 
 		const noBrief = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'work.json' }],
+			'/repos/acme/design/contents/prototypes/alpha*': [{ type: 'file', name: 'work.json' }],
 		});
 		expect((await new DesignRepo(noBrief.github, REF).listProjects())[0]?.title).toBe('alpha');
 	});
@@ -142,7 +142,7 @@ describe('listProjects', () => {
 		];
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/prototypes/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
 		});
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.work.find((i) => i.name === 'codebase')).toMatchObject({
@@ -162,7 +162,7 @@ describe('listProjects', () => {
 	it('shows no work, not an error, for a project that has none recorded', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],
+			'/repos/acme/design/contents/prototypes/alpha*': [{ type: 'file', name: 'brief.md' }],
 		});
 		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
@@ -170,7 +170,7 @@ describe('listProjects', () => {
 	it('shows no work, not an error, when the record is unreadable', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64('{ not json') },
+			'/repos/acme/design/contents/prototypes/alpha/work.json*': { sha: 'f1', content: b64('{ not json') },
 		});
 		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
@@ -197,16 +197,16 @@ describe('listProjects', () => {
 		const repo = (state: { tree: string; brief: string; comments: number }) =>
 			fakeGitHub({
 				...routes,
-				'/repos/acme/design/contents/projects*': () => [{ type: 'dir', name: 'alpha', sha: state.tree }],
-				'/repos/acme/design/contents/projects/alpha/brief.md*': () => ({ sha: 'b', content: b64(state.brief) }),
-				'/repos/acme/design/commits?path=projects%2Falpha*': [],
+				'/repos/acme/design/contents/prototypes*': () => [{ type: 'dir', name: 'alpha', sha: state.tree }],
+				'/repos/acme/design/contents/prototypes/alpha/brief.md*': () => ({ sha: 'b', content: b64(state.brief) }),
+				'/repos/acme/design/commits?path=prototypes%2Falpha*': [],
 				'/repos/acme/design/issues?state=all*': () => [
 					{ number: 7, state: 'open', comments: state.comments, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
 				],
 				'/repos/acme/design/issues/7/comments*': () =>
 					Array.from({ length: state.comments }, (_, i) => ({ id: i + 1, user: { login: 'pm' }, body: 'x', created_at: `2026-10-05T10:0${i}:00Z` })),
 			});
-		const perProject = (paths: string[]) => paths.filter((p) => p.includes('projects/alpha') || p.includes('projects%2Falpha'));
+		const perProject = (paths: string[]) => paths.filter((p) => p.includes('prototypes/alpha') || p.includes('prototypes%2Falpha'));
 
 		it('asks only for the folder list and the threads when no project folder changed', async () => {
 			const state = { tree: 't1', brief: '# Inactive users\n', comments: 3 };
@@ -238,8 +238,8 @@ describe('listProjects', () => {
 			let refuse = true;
 			const { github: session, api } = fakeGitHub({
 				...routes,
-				'/repos/acme/design/contents/projects*': () => [{ type: 'dir', name: 'alpha', sha: 't1' }],
-				'/repos/acme/design/commits?path=projects%2Falpha*': () => {
+				'/repos/acme/design/contents/prototypes*': () => [{ type: 'dir', name: 'alpha', sha: 't1' }],
+				'/repos/acme/design/commits?path=prototypes%2Falpha*': () => {
 					if (refuse) throw new Error('rate limited');
 					return [{ commit: { author: { name: 'Ana' }, committer: { date: '2026-10-06T12:00:00Z' } }, author: { login: 'ana' } }];
 				},
@@ -288,11 +288,11 @@ describe('contributors', () => {
 			},
 		];
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'work.json' }],
-			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
+			'/repos/acme/design/contents/prototypes/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/prototypes/alpha*': [{ type: 'file', name: 'work.json' }],
+			'/repos/acme/design/contents/prototypes*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
-			'/repos/acme/design/commits?path=projects%2Falpha*': [
+			'/repos/acme/design/commits?path=prototypes%2Falpha*': [
 				{ commit: { author: { name: 'Noah Shrader' } }, author: { login: 'noahshrader-flock' } },
 				{ commit: { author: { name: 'github-actions[bot]' } }, author: { login: 'github-actions[bot]' } },
 				{ commit: { author: { name: 'Ada Lovelace' } }, author: { login: 'ada' } },
@@ -309,10 +309,10 @@ describe('contributors', () => {
 
 	it('still lists the project if the folder history cannot be read', async () => {
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha*': [],
-			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
+			'/repos/acme/design/contents/prototypes/alpha*': [],
+			'/repos/acme/design/contents/prototypes*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
-			'/repos/acme/design/commits?path=projects%2Falpha*': () => {
+			'/repos/acme/design/commits?path=prototypes%2Falpha*': () => {
 				throw new Error('rate limited');
 			},
 		});
@@ -323,14 +323,14 @@ describe('contributors', () => {
 describe('readRecord', () => {
 	it('reads one file of a project as text', async () => {
 		const { github: session, api } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/review.md*': { sha: 'f1', content: b64('# Review\nnotes ✓') },
+			'/repos/acme/design/contents/prototypes/alpha/review.md*': { sha: 'f1', content: b64('# Review\nnotes ✓') },
 		});
 		expect(await new DesignRepo(session, REF).readRecord('alpha', 'review.md')).toBe('# Review\nnotes ✓');
-		expect(api).toHaveBeenCalledWith('/repos/acme/design/contents/projects/alpha/review.md');
+		expect(api).toHaveBeenCalledWith('/repos/acme/design/contents/prototypes/alpha/review.md');
 	});
 
 	it('says so when GitHub returns something that is not a file', async () => {
-		const { github: session } = fakeGitHub({ '/repos/acme/design/contents/projects/alpha/docs*': [] });
+		const { github: session } = fakeGitHub({ '/repos/acme/design/contents/prototypes/alpha/docs*': [] });
 		await expect(new DesignRepo(session, REF).readRecord('alpha', 'docs')).rejects.toThrow(/could not be read/);
 	});
 });

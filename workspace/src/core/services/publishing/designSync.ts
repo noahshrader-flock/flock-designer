@@ -6,7 +6,7 @@ import { mergeWorkRecords } from '../../../shared/workRecords';
 import { commitOnto, git } from '../platform/git';
 import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
-import { workPath } from '../../../shared/designPaths';
+import { PROTOTYPES_DIR, prototypeIdOf, workPath } from '../../../shared/designPaths';
 
 /**
  * The commit is built on GitHub's tip in a temporary index and pushed plainly, so the person's branch, index and files
@@ -57,7 +57,7 @@ export const syncRecords = async (designRoot: string, started: (projectId: strin
 		const theirs = await g('rev-parse', upstream);
 
 		// The person's own commits are theirs to publish: until they have, records wait, and nothing here is touched.
-		const outside = lines(await g('diff', '--name-only', `${theirs}...HEAD`)).filter((f) => !f.startsWith('projects/'));
+		const outside = lines(await g('diff', '--name-only', `${theirs}...HEAD`)).filter((f) => !f.startsWith(`${PROTOTYPES_DIR}/`));
 		if (outside.length > 0) {
 			return held(
 				`${plural(outside.length, 'change')} outside the project records ${outside.length === 1 ? 'is' : 'are'} waiting to be pushed. Records are held back; push ${outside.length === 1 ? 'it' : 'those'} yourself, and records will flow again.`,
@@ -107,8 +107,8 @@ const recordsOnTopOf = async (
 	};
 	const paths = [
 		...new Set([
-			...lines(await g(['diff', '--name-only', '--no-renames', base, '--', 'projects'])),
-			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', 'projects'])),
+			...lines(await g(['diff', '--name-only', '--no-renames', base, '--', PROTOTYPES_DIR])),
+			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', PROTOTYPES_DIR])),
 		]),
 	]
 		.filter((p) => !unrecorded(p))
@@ -151,7 +151,7 @@ const recordsOnTopOf = async (
 		}
 	}
 
-	const ids = [...new Set([...changes.keys()].map((p) => /^projects\/([^/]+)\//.exec(p)?.[1]).filter((x): x is string => Boolean(x)))].sort();
+	const ids = [...new Set([...changes.keys()].map(prototypeIdOf).filter((x): x is string => Boolean(x)))].sort();
 	try {
 		const commit = await commitOnto(designRoot, theirs, theirs, changes, `Update ${ids.join(', ')}`);
 		return commit === null ? { commit: null, ids: [], paths, read } : { commit, ids, paths, read };

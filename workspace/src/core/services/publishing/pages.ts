@@ -1,5 +1,5 @@
 import type { PageStatus } from '../../../shared/contract';
-import { prototypePagePath, sitePath } from '../../../shared/designPaths';
+import { prototypePagePath, sitePath, versionPageOf } from '../../../shared/designPaths';
 import type { GitHubApi } from '../../../codeHost/github';
 
 import { hostErrorKind } from '../../../codeHost/hostError';
@@ -110,8 +110,8 @@ export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteB
 	let code = false;
 	for (const f of asArray(asRecord(await github.api(`${base}/compare/${deployed}...${vis.defaultBranch}`)).files)) {
 		const file = String(asRecord(f).filename);
-		const m = /^projects\/([^/]+)\/prototypes\/([^/]+)\.html$/.exec(file);
-		if (m?.[1] && m[2]) return { kind: 'page', projectId: m[1], name: m[2] };
+		const page = versionPageOf(file);
+		if (page) return { kind: 'page', ...page };
 		code ||= isSiteSource(file);
 	}
 	return code ? { kind: 'code' } : null;

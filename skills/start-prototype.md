@@ -12,7 +12,7 @@ From the product repository, run:
 node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --title "<project title>" --note "<what they asked for>"
 ```
 
-- **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
+- **`<id>`** is the project's folder in `../flock-designer/prototypes/`: the existing one when this continues a
   project, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
   person about it. `--title` is needed only for a new project.
 - **Each run is a new version from the brief** (`v1`, then `v2`): run it again for "a different idea", once per idea
@@ -56,7 +56,7 @@ node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --
   that builds the page, and the one that saves it. Do not work from the comments alone: without that task there is no
   build and no save, and the page the reviewers see does not change.
 - **Edit only the file the task names**, in the app's own folder. The version's source in the design repository
-  (`../flock-designer/projects/<id>/prototypes/`) is the saved copy: saving writes it from the working one, so an edit
+  (`../flock-designer/prototypes/<id>/`) is the saved copy: saving writes it from the working one, so an edit
   made there is lost, and the page is not rebuilt. The product repository's own scripts (`scripts/smoke-prototype.mjs`)
   are for code in the product, not for a prototype.
 - **Save each change before starting another:** a change not yet saved is only on this machine, and the next

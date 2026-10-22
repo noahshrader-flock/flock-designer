@@ -27,15 +27,15 @@ const ledger = (views: CellResult[], violations: AccessibilityIssue[] = [], inco
 		key: 'app',
 		of: 'Shop’s app',
 		result: result(violations, incomplete),
-		resultFile: 'projects/p/accessibility/app.json',
-		views: [{ state: 'Home', results: views, evidence: 'projects/p/accessibility/app/home/cells.json' }],
+		resultFile: 'prototypes/p/accessibility/app.json',
+		views: [{ state: 'Home', results: views, evidence: 'prototypes/p/accessibility/app/home/cells.json' }],
 		source: [cell('timing', '2.2.1', 'notRun', "this checkout's remote names no default branch")],
-		sourceFile: 'projects/p/accessibility/app/source.json',
+		sourceFile: 'prototypes/p/accessibility/app/source.json',
 		target,
 		depth: 'full',
 	});
 const row = (l: Ledger, sc: string) => l.rows.find((r) => r.sc === sc);
-const FILE = 'projects/p/accessibility/app.ledger.json';
+const FILE = 'prototypes/p/accessibility/app.ledger.json';
 
 describe('a ledger', () => {
 	const l = ledger(
@@ -59,14 +59,14 @@ describe('a ledger', () => {
 		expect(row(l, '1.1.1')).toMatchObject({
 			status: 'found',
 			found: ['axe image-alt: 2 elements, in Home'],
-			evidence: ['projects/p/accessibility/app.json'],
+			evidence: ['prototypes/p/accessibility/app.json'],
 		});
 		expect(layersOf(row(l, '1.1.1') as LedgerRow)).toEqual(['axe']);
-		expect(row(l, '2.4.7')).toMatchObject({ status: 'found', evidence: ['projects/p/accessibility/app/home/cells.json'] });
+		expect(row(l, '2.4.7')).toMatchObject({ status: 'found', evidence: ['prototypes/p/accessibility/app/home/cells.json'] });
 		expect(layersOf(row(l, '2.4.7') as LedgerRow)).toEqual(['probe']);
 		expect(row(l, '4.1.2')?.status).toBe('measured');
 		expect(layersOf(row(l, '4.1.2') as LedgerRow)).toEqual(['axe', 'probe']);
-		expect(row(l, '4.1.2')?.evidence.sort()).toEqual(['projects/p/accessibility/app.json', 'projects/p/accessibility/app/home/cells.json']);
+		expect(row(l, '4.1.2')?.evidence.sort()).toEqual(['prototypes/p/accessibility/app.json', 'prototypes/p/accessibility/app/home/cells.json']);
 	});
 
 	it('says why what was not run was not, and what does not apply, and that "not run" outweighs "measured"', () => {
@@ -197,7 +197,7 @@ describe('what a gate refuses', () => {
 
 	it('refuses a status resting on a file that is not there, or on none, and one not run with no reason', () => {
 		expect(ledgerFaults(l, FILE, (p) => !p.endsWith('cells.json'), review)).toContain(
-			'WCAG 2.4.7 rests on projects/p/accessibility/app/home/cells.json, which is not there',
+			'WCAG 2.4.7 rests on prototypes/p/accessibility/app/home/cells.json, which is not there',
 		);
 		const bare: Ledger = { ...l, rows: l.rows.map((r) => (r.sc === '1.1.1' ? { ...r, evidence: [] } : r.sc === '2.2.1' ? { ...r, why: '' } : r)) };
 		const faults = ledgerFaults(bare, FILE, all, withReviewSection(null, bare, FILE));
@@ -228,10 +228,10 @@ describe('the record of a measure', () => {
 		const { accessibilityViewDirs } = await import('../src/shared/designPaths');
 		const dirs = accessibilityViewDirs('p', null, ['Home', 'home!', 'Главная', 'Обзор']);
 		expect([...dirs.values()]).toEqual([
-			'projects/p/accessibility/app/home',
-			'projects/p/accessibility/app/home-2',
-			'projects/p/accessibility/app/view',
-			'projects/p/accessibility/app/view-2',
+			'prototypes/p/accessibility/app/home',
+			'prototypes/p/accessibility/app/home-2',
+			'prototypes/p/accessibility/app/view',
+			'prototypes/p/accessibility/app/view-2',
 		]);
 		const { recordFiles } = await import('../src/core/services/accessibility/accessibilityRecord');
 		const { files } = recordFiles(
@@ -247,7 +247,7 @@ describe('the record of a measure', () => {
 			},
 			null,
 		);
-		const kept = JSON.parse(files.find((f) => f.path === 'projects/p/accessibility/app.json')?.text ?? '{}') as {
+		const kept = JSON.parse(files.find((f) => f.path === 'prototypes/p/accessibility/app.json')?.text ?? '{}') as {
 			probe: { views: { files: string[] }[] };
 		};
 		expect(kept.probe.views[0]?.files).toEqual(['cells.json', 'tab.json', 'stops/01.png']);

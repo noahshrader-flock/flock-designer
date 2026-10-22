@@ -33,10 +33,10 @@ export const deps = (cwd: string) => ({
 	github: world.github,
 });
 export const run = (...argv: string[]) => main(argv, deps(world.product));
-export const recorded = () => JSON.parse(readFileSync(join(world.design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
+export const recorded = () => JSON.parse(readFileSync(join(world.design, 'prototypes', 'demo', 'work.json'), 'utf8')) as { name: string }[];
 /** As DSNR reads a project's versions: those recorded, then those started here, recorded once saved. */
 export const versions = () => [
-	...(existsSync(join(world.design, 'projects', 'demo', 'work.json')) ? recorded() : []),
+	...(existsSync(join(world.design, 'prototypes', 'demo', 'work.json')) ? recorded() : []),
 	...pendingOf(world.prototypes, 'demo'),
 ];
 

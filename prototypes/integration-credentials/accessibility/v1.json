@@ -1,0 +1,671 @@
+{
+	"of": "integration-credentials v1's page",
+	"notOpened": [],
+	"result": {
+		"ran": {
+			"axe": "4.14.0",
+			"tags": [
+				"wcag2a"
+			],
+			"target": "WCAG 2.0 Level A",
+			"declared": true,
+			"at": "2026-10-21T19:48:40.894Z",
+			"states": [
+				"default",
+				"confirm",
+				"loading",
+				"success",
+				"large",
+				"empty",
+				"error"
+			]
+		},
+		"violations": [],
+		"incomplete": [
+			{
+				"rule": "aria-valid-attr-value",
+				"help": "ARIA attributes must conform to valid values",
+				"impact": "critical",
+				"criteria": [
+					"4.1.2"
+				],
+				"nodes": 5,
+				"url": "https://dequeuniversity.com/rules/axe/4.14/aria-valid-attr-value?application=axeAPI",
+				"states": [
+					"confirm",
+					"success",
+					"large"
+				],
+				"elements": [
+					{
+						"target": "#credential-expiration",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r4:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credential-expiratio...\" aria-describedby=\"credential-expiratio...\" id=\"credential-expiratio...\" class=\"MuiSelect-select Mui...\">",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r4:\"",
+						"state": "confirm"
+					},
+					{
+						"target": "#credentials-type-filter",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r9:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credentials-type-filter-label credentials-type-filter\" id=\"credentials-type-filter\" ...>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r9:\"",
+						"state": "success"
+					},
+					{
+						"target": "#\\:r22\\:",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r24:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\":r23: :r22:\" id=\":r22:\" class=\"MuiSelect-select MuiTablePagination-select MuiSelect-standard MuiInputBase-input css-1cccqvr\">25</div>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r24:\"",
+						"state": "success"
+					},
+					{
+						"target": "#credentials-type-filter",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r9:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credentials-type-filter-label credentials-type-filter\" id=\"credentials-type-filter\" ...>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r9:\"",
+						"state": "large"
+					},
+					{
+						"target": "#\\:r3e\\:",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r3g:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\":r3f: :r3e:\" id=\":r3e:\" class=\"MuiSelect-select MuiTablePagination-select MuiSelect-standard MuiInputBase-input css-1cccqvr\">25</div>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r3g:\"",
+						"state": "large"
+					}
+				]
+			},
+			{
+				"rule": "aria-hidden-focus",
+				"help": "ARIA hidden element must not be focusable or contain focusable elements",
+				"impact": "serious",
+				"criteria": [
+					"4.1.2"
+				],
+				"nodes": 6,
+				"url": "https://dequeuniversity.com/rules/axe/4.14/aria-hidden-focus?application=axeAPI",
+				"states": [
+					"confirm",
+					"loading",
+					"success",
+					"large",
+					"empty",
+					"error"
+				],
+				"elements": [
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "confirm"
+					},
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "loading"
+					},
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "success"
+					},
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "large"
+					},
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "empty"
+					},
+					{
+						"target": "#root",
+						"html": "<div id=\"root\" aria-hidden=\"true\">",
+						"fix": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state",
+						"state": "error"
+					}
+				]
+			}
+		],
+		"bestPractice": {
+			"violations": [
+				{
+					"rule": "heading-order",
+					"help": "Heading levels should only increase by one",
+					"impact": "moderate",
+					"criteria": [],
+					"nodes": 1,
+					"url": "https://dequeuniversity.com/rules/axe/4.14/heading-order?application=axeAPI",
+					"states": [
+						"default"
+					],
+					"elements": [
+						{
+							"target": "div[data-e2e-ref=\"card-ONVIF\"] > .MuiCardActions-root.MuiCardActions-spacing.css-1vlkv5q > .MuiGrid-spacing-xs-1.css-l1sayh.MuiGrid-container > .MuiGrid-grid-xs-true.css-sv2ue.MuiGrid-item > .css-1uvmhet.MuiStack-root > .css-i2xjt7",
+							"html": "<h6 class=\"MuiTypography-root MuiTypography-subtitle1 css-i2xjt7\">ONVIF</h6>",
+							"fix": "Fix any of the following:\n  Heading order invalid",
+							"state": "default"
+						}
+					]
+				},
+				{
+					"rule": "landmark-one-main",
+					"help": "Document should have one main landmark",
+					"impact": "moderate",
+					"criteria": [],
+					"nodes": 1,
+					"url": "https://dequeuniversity.com/rules/axe/4.14/landmark-one-main?application=axeAPI",
+					"states": [
+						"default"
+					],
+					"elements": [
+						{
+							"target": "html",
+							"html": "<html lang=\"en\">",
+							"fix": "Fix all of the following:\n  Document does not have a main landmark",
+							"state": "default"
+						}
+					]
+				},
+				{
+					"rule": "region",
+					"help": "All page content should be contained by landmarks",
+					"impact": "moderate",
+					"criteria": [],
+					"nodes": 15,
+					"url": "https://dequeuniversity.com/rules/axe/4.14/region?application=axeAPI",
+					"states": [
+						"default"
+					],
+					"elements": [
+						{
+							"target": "h1",
+							"html": "<h1 class=\"MuiTypography-root MuiTypography-h3 css-v004te\">Integrations</h1>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": ".css-19mcmqq",
+							"html": "<p class=\"MuiTypography-root MuiTypography-body1 css-19mcmqq\">Connect and manage third-party tools and services to enhance workflow efficiency across FlockOS. <a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineAlways css-10rkygj\" href=\"#\">Learn more</a></p>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": ".MuiInputAdornment-root > .notranslate",
+							"html": "<span class=\"notranslate\">​</span>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "#\\:r1\\:",
+							"html": "<input aria-invalid=\"false\" id=\":r1:\" placeholder=\"Search integration name\" type=\"text\" aria-label=\"Search integration name\" class=\"MuiInputBase-input MuiOutlinedInput-input MuiInputBase-inputAdornedStart css-1ixds2g\" value=\"\">",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": ".MuiTabs-root",
+							"html": "<div class=\"MuiTabs-root css-s31lak\">",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "div[data-e2e-ref=\"card-ONVIF\"] > .MuiCardHeader-root.css-68saif > .MuiCardHeader-action.css-1bh09gn > .css-1vfrdif.MuiStack-root > .MuiChip-root.MuiChip-filled.MuiChip-sizeMedium > .MuiChip-label.MuiChip-labelMedium.css-9iedg7",
+							"html": "<span class=\"MuiChip-label MuiChip-labelMedium css-9iedg7\">Added</span>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "div[data-e2e-ref=\"card-ONVIF\"] > .MuiCardActions-root.MuiCardActions-spacing.css-1vlkv5q > .MuiGrid-spacing-xs-1.css-l1sayh.MuiGrid-container > .MuiGrid-grid-xs-true.css-sv2ue.MuiGrid-item",
+							"html": "<div class=\"MuiGrid-root MuiGrid-item MuiGrid-grid-xs-true MuiBox-root css-sv2ue\">",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "div[data-e2e-ref=\"card-Milestone\"] > .MuiCardHeader-root.css-68saif > .MuiCardHeader-action.css-1bh09gn > .css-1vfrdif.MuiStack-root > .MuiChip-root.MuiChip-filled.MuiChip-sizeMedium > .MuiChip-label.MuiChip-labelMedium.css-9iedg7",
+							"html": "<span class=\"MuiChip-label MuiChip-labelMedium css-9iedg7\">Added</span>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "div[data-e2e-ref=\"card-Milestone\"] > .MuiCardActions-root.MuiCardActions-spacing.css-1vlkv5q > .MuiGrid-spacing-xs-1.css-l1sayh.MuiGrid-container > .MuiGrid-grid-xs-true.css-sv2ue.MuiGrid-item",
+							"html": "<div class=\"MuiGrid-root MuiGrid-item MuiGrid-grid-xs-true MuiBox-root css-sv2ue\">",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						},
+						{
+							"target": "div[data-e2e-ref=\"card-AxonFusus\"] > .MuiCardHeader-root.css-68saif > .MuiCardHeader-action.css-1bh09gn > .css-1vfrdif.MuiStack-root > .MuiChip-root.MuiChip-filled.MuiChip-sizeMedium > .MuiChip-label.MuiChip-labelMedium.css-9iedg7",
+							"html": "<span class=\"MuiChip-label MuiChip-labelMedium css-9iedg7\">Added</span>",
+							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
+							"state": "default"
+						}
+					]
+				}
+			],
+			"incomplete": []
+		},
+		"notAutomated": []
+	},
+	"probe": {
+		"depth": "light, at build",
+		"views": [
+			{
+				"state": "default",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "found",
+						"findings": [
+							{
+								"target": "#root > div > div > header > div:nth-of-type(3) > div > div:nth-of-type(1) > div:nth-of-type(1) > button",
+								"detail": "focused, it is drawn as it is when not (stops/15.png)"
+							}
+						]
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "none",
+						"findings": []
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/default",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "confirm",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "none",
+						"findings": []
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/confirm",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "loading",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "none",
+						"findings": []
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/loading",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "success",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/success",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "large",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/large",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "empty",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "none",
+						"findings": []
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/empty",
+				"files": [
+					"cells.json"
+				]
+			},
+			{
+				"state": "error",
+				"results": [
+					{
+						"cell": "structure",
+						"sc": "1.3.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-reach",
+						"sc": "2.1.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "keyboard-trap",
+						"sc": "2.1.2",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-order",
+						"sc": "2.4.3",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-visible",
+						"sc": "2.4.7",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "focus-obscured",
+						"sc": "2.4.11",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "on-focus",
+						"sc": "3.2.1",
+						"status": "none",
+						"findings": []
+					},
+					{
+						"cell": "name-role-value",
+						"sc": "4.1.2",
+						"status": "none",
+						"findings": []
+					}
+				],
+				"evidence": "projects/integration-credentials/accessibility/v1/error",
+				"files": [
+					"cells.json"
+				]
+			}
+		],
+		"source": []
+	}
+}

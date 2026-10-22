@@ -71,7 +71,7 @@ exports.run = async () => {
 	inProduct(save);
 	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1', title: 'Made here · Version 1' });
 	await until('the new prototype opening', () => tabs().includes('Made here · Version 1'), 60000);
-	const covers = path.join(folder.uri.fsPath, '../flock-designer/projects/made-here/covers');
+	const covers = path.join(folder.uri.fsPath, '../flock-designer/prototypes/made-here/covers');
 	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 90000);
 	// Only that the dialogs' commands run without failing: this cannot see inside a webview.
 	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });

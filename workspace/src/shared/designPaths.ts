@@ -11,9 +11,25 @@ export const isPrototypeKey = (branch: string): boolean => branch.startsWith(PRO
 
 export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
 
-export const projectDir = (projectId: string): string => `projects/${projectId}`;
+/** The design repository's folder of prototypes: each in a folder of its own, by its id. */
+export const PROTOTYPES_DIR = 'prototypes';
+
+export const projectDir = (projectId: string): string => `${PROTOTYPES_DIR}/${projectId}`;
 
 export const projectPath = (projectId: string, file: string): string => `${projectDir(projectId)}/${file}`;
+
+/** The prototype a path of the design repository is in, if it is in one. */
+export const prototypeIdOf = (path: string): string | null => {
+	const [dir, id, ...rest] = path.split('/');
+	return dir === PROTOTYPES_DIR && id && rest.length > 0 ? id : null;
+};
+
+/** The version whose page a path of the design repository is, if it is one. */
+export const versionPageOf = (path: string): { projectId: string; name: string } | null => {
+	const [dir, id, file, ...more] = path.split('/');
+	const name = file?.endsWith('.html') ? file.slice(0, -'.html'.length) : '';
+	return dir === PROTOTYPES_DIR && id && more.length === 0 && isVersionName(name) ? { projectId: id, name } : null;
+};
 
 export const WORK_FILE = 'work.json';
 export const workPath = (projectId: string): string => projectPath(projectId, WORK_FILE);
@@ -21,9 +37,9 @@ export const workPath = (projectId: string): string => projectPath(projectId, WO
 /** What was asked for a version, in order: one file for each, as a version's page is. */
 export const requestsPath = (projectId: string, name: string): string => projectPath(projectId, `requests-${name}.md`);
 
-export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
+export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `${name}.html`);
 
-export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
+export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `${name}.tsx`);
 
 /** `name` null: the product's own app (`dsnr accessibility`). */
 export const accessibilityPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.json`;
@@ -63,11 +79,14 @@ export const coverPath = (projectId: string, name: string, cover: string): strin
 	return projectPath(projectId, `covers/${name}-${cover}.jpg`);
 };
 
+/** Where the site puts its prototypes, so a link says what it leads to: `prototype/<id>/<version>/`. */
+export const SITE_PROTOTYPES = 'prototype';
+
 /** From the site's root. */
-export const sitePath = (projectId: string, name: string): string | null => (isVersionName(name) ? `${projectId}/${name}/` : null);
+export const sitePath = (projectId: string, name: string): string | null => (isVersionName(name) ? `${SITE_PROTOTYPES}/${projectId}/${name}/` : null);
 
 /** Large files pages share (fonts, mostly), kept once as the data they were embedded as, named by their content's hash. */
-export const SHARED_DIR = 'projects/_shared';
+export const SHARED_DIR = `${PROTOTYPES_DIR}/_shared`;
 export const sharedFilePath = (hash: string): string => `${SHARED_DIR}/${hash}.datauri`;
 export const SHARED_REF = /\/_shared\/([0-9a-f]{16})\b/g;
 

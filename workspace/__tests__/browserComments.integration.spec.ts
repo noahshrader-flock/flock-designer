@@ -59,10 +59,10 @@ beforeAll(async () => {
 	const viewer = join(root, 'viewer');
 	await build({ configFile: resolve(__dirname, '../viewer.vite.config.ts'), build: { outDir: viewer, emptyOutDir: true }, logLevel: 'silent' });
 	const design = join(root, 'flock-designer');
-	mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
-	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
+	mkdirSync(join(design, 'prototypes', 'demo'), { recursive: true });
+	writeFileSync(join(design, 'prototypes', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
-		join(design, 'projects', 'demo', 'work.json'),
+		join(design, 'prototypes', 'demo', 'work.json'),
 		JSON.stringify(
 			['v1'].map((name, i) => ({
 				projectId: 'demo',
@@ -74,21 +74,21 @@ beforeAll(async () => {
 			})),
 		),
 	);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
-	mkdirSync(join(design, 'projects', 'hostile', 'prototypes'), { recursive: true });
-	writeFileSync(join(design, 'projects', 'hostile', 'brief.md'), '# Hostile\n');
+	writeFileSync(join(design, 'prototypes', 'demo', 'v1.html'), PAGE);
+	mkdirSync(join(design, 'prototypes', 'hostile'), { recursive: true });
+	writeFileSync(join(design, 'prototypes', 'hostile', 'brief.md'), '# Hostile\n');
 	writeFileSync(
-		join(design, 'projects', 'hostile', 'work.json'),
+		join(design, 'prototypes', 'hostile', 'work.json'),
 		JSON.stringify([{ projectId: 'hostile', name: 'v1', branch: 'prototype/hostile/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
-	writeFileSync(join(design, 'projects', 'hostile', 'prototypes', 'v1.html'), HOSTILE);
-	mkdirSync(join(design, 'projects', 'long', 'prototypes'), { recursive: true });
-	writeFileSync(join(design, 'projects', 'long', 'brief.md'), '# Long\n');
+	writeFileSync(join(design, 'prototypes', 'hostile', 'v1.html'), HOSTILE);
+	mkdirSync(join(design, 'prototypes', 'long'), { recursive: true });
+	writeFileSync(join(design, 'prototypes', 'long', 'brief.md'), '# Long\n');
 	writeFileSync(
-		join(design, 'projects', 'long', 'work.json'),
+		join(design, 'prototypes', 'long', 'work.json'),
 		JSON.stringify([{ projectId: 'long', name: 'v1', branch: 'prototype/long/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
-	writeFileSync(join(design, 'projects', 'long', 'prototypes', 'v1.html'), LONG);
+	writeFileSync(join(design, 'prototypes', 'long', 'v1.html'), LONG);
 	server = new PrototypeServer();
 	const out = join(root, 'site');
 	buildSite({
@@ -168,9 +168,9 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 	it('comments through DSNR with its key, no token of its own, and keeps the key when the page loads again', async () => {
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
-			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
-			expect(tab.url()).toBe(`${base}demo/v1/`);
+			expect(tab.url()).toBe(`${base}prototype/demo/v1/`);
 			expect(await tab.evaluate(() => sessionStorage.getItem('dsnr.review-key'))).toBe(KEY);
 			expect(await tab.evaluate(() => Object.keys(localStorage))).toEqual([]);
 
@@ -200,9 +200,9 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			const handed = Date.now() + 20_000;
 			while (!addressed.length && Date.now() < handed) await new Promise((r) => setTimeout(r, 50));
 			expect(addressed[0]?.[1]).toBe('prototype/demo/v1');
-			expect(tab.url()).toBe(`${base}demo/v1/`);
+			expect(tab.url()).toBe(`${base}prototype/demo/v1/`);
 
-			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/demo/v1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');
 		});
@@ -212,7 +212,7 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 1280, height: 800 });
-			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			await press(tab, 'Comment');
 			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
@@ -262,7 +262,7 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 1280, height: 800 });
-			await tab.goto(`${base}long/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/long/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			await press(tab, 'Comment');
 			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
@@ -304,8 +304,8 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 				if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			});
 			const other = await browser.newPage(OWN_WINDOW);
-			await other.goto(`${base}demo/v1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
-			await tab.goto(`${base}hostile/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await other.goto(`${base}prototype/demo/v1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/hostile/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			const until = Date.now() + 20_000;
 			while (tried === null && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 			for (const t of [tab, other])

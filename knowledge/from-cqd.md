@@ -18,7 +18,7 @@ Nothing here has been applied to Paradome. It is a map to follow.
 | Composition, layout, shell and dashboard standards, and the reference maps | Paradome's `.dsnr/composition/` and its pattern files, as Coke's are |
 | Its non-negotiables | Split: what holds anywhere is already in `standards/non-negotiables.md`; what is CHEQ's goes in Paradome's `.dsnr/standards/non-negotiables.md` |
 | The general design standards (layout, states, accessibility, copy) | Already shared, in `standards/universal/` |
-| Briefs, checklists and project notes | The design repository's `projects/`, one folder per project |
+| Briefs, checklists and project notes | The design repository's `prototypes/`, one folder per project |
 | Paradome's own `CLAUDE.md` | Its `AGENTS.md`, with `CLAUDE.md` as `@AGENTS.md`, so every agent reads the same instructions |
 | The smoke test and the ready-made briefs | Nothing: DSNR writes each task itself |
 

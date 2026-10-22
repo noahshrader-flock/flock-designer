@@ -37,7 +37,7 @@ const workIn = (root: string) =>
 		readDesignFile: shared.store.read,
 		esbuild: () => 'esbuild',
 		designSystemOf: async () => null,
-		recordsRootOf: () => join(home, 'design', 'projects'),
+		recordsRootOf: () => join(home, 'design', 'prototypes'),
 	});
 
 const start = (root: string) => workIn(root).start(root, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'develop', me: null });

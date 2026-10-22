@@ -19,7 +19,7 @@ describe('the guide for building UI', () => {
 	it('speaks of none of DSNR’s workflow or one tool’s mechanics: it is for any agent', () => {
 		const forbidden = [
 			/context[- ]receipt/i,
-			/projects\/</,
+			/prototypes\/</,
 			/AskUserQuestion/,
 			/NEEDS PATH/,
 			/Build in the codebase/,

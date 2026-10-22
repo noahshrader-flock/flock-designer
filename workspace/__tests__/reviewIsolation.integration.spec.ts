@@ -68,10 +68,10 @@ const site = async (separate: boolean): Promise<string> => {
 	const viewer = join(root, separate ? 'apart' : 'together', 'viewer');
 	const out = join(root, separate ? 'apart' : 'together', 'site');
 	for (const id of ['alpha', 'beta']) {
-		mkdirSync(join(design, 'projects', id, 'prototypes'), { recursive: true });
-		writeFileSync(join(design, 'projects', id, 'brief.md'), `# ${id}\n`);
-		writeFileSync(join(design, 'projects', id, 'work.json'), JSON.stringify(record(id)));
-		writeFileSync(join(design, 'projects', id, 'prototypes', 'v1.html'), HOSTILE);
+		mkdirSync(join(design, 'prototypes', id), { recursive: true });
+		writeFileSync(join(design, 'prototypes', id, 'brief.md'), `# ${id}\n`);
+		writeFileSync(join(design, 'prototypes', id, 'work.json'), JSON.stringify(record(id)));
+		writeFileSync(join(design, 'prototypes', id, 'v1.html'), HOSTILE);
 	}
 	mkdirSync(viewer, { recursive: true });
 	writeFileSync(join(viewer, 'viewer.js'), VIEWER);
@@ -170,7 +170,7 @@ const STEPS = ['deep', 'copy loaded'];
 describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser', () => {
 	it('on the pages’ own address, reaches nothing of the bar, the tab or the extension, and still works as itself', async () => {
 		const base = await site(true);
-		const r = await review(`${base}alpha/v1/`, STEPS);
+		const r = await review(`${base}prototype/alpha/v1/`, STEPS);
 		expect(r.pageAt?.startsWith(await server.pagesOrigin())).toBe(true);
 		expect(r.tried).toMatchObject({ 'read the bar': 'blocked', 'rewrite the bar': 'blocked', 'read the bar storage': 'blocked' });
 		expect(r.tried['its own cookie']).toBe('allowed: mine=1');
@@ -186,7 +186,7 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 		// Its copy on the bar's address is not served there, so never runs.
 		expect(r.made.has('copy ran')).toBe(false);
 		expect(r.copied).toBeNull();
-		const beta = await review(`${base}beta/v1/`, [...STEPS, 'hijack']);
+		const beta = await review(`${base}prototype/beta/v1/`, [...STEPS, 'hijack']);
 		expect(beta.hijacked).toBe(false);
 	}, 90_000);
 });
@@ -221,7 +221,7 @@ const published = (bar: string, steps: string[]) =>
 describe.skipIf(NO_CHROME)('a hostile prototype on the published site, in the real browser', () => {
 	it('beside its bar with no origin of its own, reaches nothing of the bar or its token, and keeps its own storage and cookie', async () => {
 		const base = await site(false);
-		const r = await published(`${base}alpha/v1/`, STEPS);
+		const r = await published(`${base}prototype/alpha/v1/`, STEPS);
 		expect(r.tried).toMatchObject({ 'read the bar': 'blocked', 'rewrite the bar': 'blocked', 'read the bar storage': 'blocked' });
 		// What it set is kept for it, in memory: the agent's stand-ins, since the browser refuses its own.
 		expect(r.tried['its own cookie']).toBe('allowed: mine=1');
@@ -229,15 +229,15 @@ describe.skipIf(NO_CHROME)('a hostile prototype on the published site, in the re
 		expect(r.owned).toBeNull();
 		// Its copy on the bar's address is framed by it, so it has no origin of its own either.
 		expect(r.copied).toBeNull();
-		const beta = await published(`${base}beta/v1/`, [...STEPS, 'hijack']);
+		const beta = await published(`${base}prototype/beta/v1/`, [...STEPS, 'hijack']);
 		expect(beta.hijacked).toBe(false);
 	}, 90_000);
 
 	it('with the sandbox taken off, reaches into the bar: the test can fail', async () => {
 		const base = await site(false);
-		const index = join(root, 'together', 'site', 'alpha', 'v1', 'index.html');
+		const index = join(root, 'together', 'site', 'prototype', 'alpha', 'v1', 'index.html');
 		writeFileSync(index, readFileSync(index, 'utf8').replace(/ sandbox="[^"]*"/, ''));
-		const r = await published(`${base}alpha/v1/`, STEPS);
+		const r = await published(`${base}prototype/alpha/v1/`, STEPS);
 		expect(r.tried['read the bar']).toMatch(/^allowed/);
 		expect(r.tried['read the bar storage']).toMatch(/^allowed/);
 		expect(r.owned).toBe('yes');

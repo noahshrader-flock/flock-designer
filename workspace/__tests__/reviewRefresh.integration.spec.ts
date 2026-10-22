@@ -16,11 +16,11 @@ const world = () => {
 	const root = mkdtempSync(join(tmpdir(), 'dsnr-refresh-'));
 	roots.push(root);
 	const design = join(root, 'design');
-	const pages = join(design, 'projects', 'demo', 'prototypes');
+	const pages = join(design, 'prototypes', 'demo');
 	mkdirSync(pages, { recursive: true });
-	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
+	writeFileSync(join(design, 'prototypes', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
-		join(design, 'projects', 'demo', 'work.json'),
+		join(design, 'prototypes', 'demo', 'work.json'),
 		JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
 	writeFileSync(
@@ -62,14 +62,14 @@ const world = () => {
 		// The real watch, with its settle time made short.
 		watch: (dir, onPage) => watchPages(dir, onPage, 60),
 	});
-	const shown = () => readFileSync(join(site, 'demo', 'v1', 'page.html'), 'utf8');
+	const shown = () => readFileSync(join(site, 'prototype', 'demo', 'v1', 'page.html'), 'utf8');
 	return { design, pages, reviews, posted, shown, close: () => disposed() };
 };
 
 describe('an open review of a prototype, as an agent saves a new page of it', () => {
 	it('has the new page built into its site, and its page told, without the tab being closed and opened again', async () => {
 		const w = world();
-		await w.reviews.open({ records: join(w.design, 'projects'), projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await w.reviews.open({ records: join(w.design, 'prototypes'), projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		expect(w.shown()).toContain('Device Alerts and Updates');
 		expect(w.posted).toEqual([]);
 

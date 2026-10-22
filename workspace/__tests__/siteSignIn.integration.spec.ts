@@ -37,13 +37,13 @@ beforeAll(async () => {
 	const viewer = join(root, 'viewer');
 	await build({ configFile: resolve(__dirname, '../viewer.vite.config.ts'), build: { outDir: viewer, emptyOutDir: true }, logLevel: 'silent' });
 	const design = join(root, 'flock-designer');
-	mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
-	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
+	mkdirSync(join(design, 'prototypes', 'demo'), { recursive: true });
+	writeFileSync(join(design, 'prototypes', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
-		join(design, 'projects', 'demo', 'work.json'),
+		join(design, 'prototypes', 'demo', 'work.json'),
 		JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
+	writeFileSync(join(design, 'prototypes', 'demo', 'v1.html'), PAGE);
 
 	fake = createServer((req, res) => {
 		const at = new URL(req.url ?? '/', 'http://x');
@@ -158,7 +158,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await answerGitHub(tab);
-			const page = `${base}demo/v1/`;
+			const page = `${base}prototype/demo/v1/`;
 			await tab.goto(page, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'), { timeout: 20_000 });
@@ -193,7 +193,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await answerGitHub(tab);
-			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
+			await tab.goto(`${base}prototype/demo/v1/`, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');
 			await tab.waitForFunction(() => document.body.textContent?.includes('Signed in as outsider, who has no access to acme/design'), {
 				timeout: 20_000,

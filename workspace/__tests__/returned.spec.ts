@@ -15,10 +15,10 @@ const ledger = (violations: AccessibilityIssue[], views: CellResult[]): Ledger =
 		key: 'app',
 		of: 'Shop’s app',
 		result: result(violations),
-		resultFile: 'projects/shop/accessibility/app.json',
-		views: [{ state: 'Home', results: views, evidence: 'projects/shop/accessibility/app/home/cells.json' }],
+		resultFile: 'prototypes/shop/accessibility/app.json',
+		views: [{ state: 'Home', results: views, evidence: 'prototypes/shop/accessibility/app/home/cells.json' }],
 		source: [],
-		sourceFile: 'projects/shop/accessibility/app/source.json',
+		sourceFile: 'prototypes/shop/accessibility/app/source.json',
 		target,
 		depth: 'full',
 	});

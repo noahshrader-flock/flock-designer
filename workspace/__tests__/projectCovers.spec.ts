@@ -17,7 +17,7 @@ const record = (name: string, more: Record<string, unknown> = {}) => ({
 	...more,
 });
 const records = (...r: unknown[]) => `${JSON.stringify(r, null, 2)}\n`;
-const RECORDS = 'projects/demo/work.json';
+const RECORDS = 'prototypes/demo/work.json';
 const PAGE = '<h1>Demo</h1>';
 const HASH = contentHashOf(PAGE);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
@@ -52,7 +52,7 @@ describe('ensureCovers', () => {
 	});
 
 	it('is a picture of the page as it is: the page’s hash is the record’s, and the file is named by it', () => {
-		expect(coverPath('demo', 'v1', HASH)).toBe(`projects/demo/covers/v1-${HASH}.jpg`);
+		expect(coverPath('demo', 'v1', HASH)).toBe(`prototypes/demo/covers/v1-${HASH}.jpg`);
 	});
 
 	it('does nothing the second time: a record whose cover is the page’s hash is current', async () => {
@@ -125,7 +125,7 @@ describe('ensureCovers', () => {
 	});
 
 	it('skips a project whose records cannot be read, and goes on to the next', async () => {
-		mem.files['projects/other/work.json'] = '{not json';
+		mem.files['prototypes/other/work.json'] = '{not json';
 		const made = await ensureCovers(deps, [{ projectId: 'other', name: 'v1' }, ...built('v1')]);
 		expect(made.map((m) => m.projectId)).toEqual(['demo']);
 	});

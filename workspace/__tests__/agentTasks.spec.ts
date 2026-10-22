@@ -73,13 +73,13 @@ describe('building a prototype in the codebase', () => {
 				skill: 's',
 				routeSkill: '# Route',
 				pageFile: '/q/v1.html',
-				auditFile: '/d/projects/users/audit-v1.md',
-				recordFile: '/d/projects/users/work.json',
+				auditFile: '/d/prototypes/users/audit-v1.md',
+				recordFile: '/d/prototypes/users/work.json',
 				name: 'v1',
 			},
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
-		expect(task).toContain('Write the audit to `/d/projects/users/audit-v1.md` before you change any code.');
+		expect(task).toContain('Write the audit to `/d/prototypes/users/audit-v1.md` before you change any code.');
 	});
 
 	it('carries the route skill, and where the route goes', () => {
@@ -88,14 +88,14 @@ describe('building a prototype in the codebase', () => {
 				skill: 's',
 				routeSkill: '# Record where the work is\n\nThe plainest form.',
 				pageFile: '/q/v1.html',
-				auditFile: '/d/projects/users/audit-v1.md',
-				recordFile: '/d/projects/users/work.json',
+				auditFile: '/d/prototypes/users/audit-v1.md',
+				recordFile: '/d/prototypes/users/work.json',
 				name: 'v1',
 			},
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
 		expect(task).toContain('# Record where the work is');
-		expect(task).toContain("Record the work's route on the `codebase` entry of `/d/projects/users/work.json`");
+		expect(task).toContain("Record the work's route on the `codebase` entry of `/d/prototypes/users/work.json`");
 	});
 });
 
@@ -104,9 +104,9 @@ describe('Handoff, on work with no route recorded', () => {
 	const base = { skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null };
 
 	it('asks for the route first, with how to choose it, and says nothing of it when there is one', () => {
-		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/projects/p/work.json' } }, bare);
+		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/prototypes/p/work.json' } }, bare);
 		expect(task).toContain('# Record where the work is');
-		expect(task).toMatch(/no route.*`\/d\/projects\/p\/work.json`/);
+		expect(task).toMatch(/no route.*`\/d\/prototypes\/p\/work.json`/);
 		expect(handoffTask(base, bare)).not.toContain('route');
 	});
 });

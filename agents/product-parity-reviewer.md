@@ -91,5 +91,5 @@ Never state a conformance level: it lives only in the product's manifest.
 Patterns reused correctly, states handled. Say so; it tells the author what to keep.
 ```
 
-`dsnr` writes your report into `projects/<project-id>/review.md`, one section per round. Write in that shape so it
+`dsnr` writes your report into `prototypes/<project-id>/review.md`, one section per round. Write in that shape so it
 can.

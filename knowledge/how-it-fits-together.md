@@ -30,7 +30,7 @@ repository (a monorepo); or as the product itself. [The shapes a product can tak
 The company's shared repository for design work (at Flock, `flock-designer`, which this page is in). It holds two
 kinds of things:
 
-- *The projects*, in `projects/`: one folder per project, with its brief, its prototypes, its reviews and the record of
+- *The projects*, in `prototypes/`: one folder per project, with its brief, its prototypes, its reviews and the record of
   its work. This is the shared memory: anyone on the team can pick up a project from its folder.
 - *The guidance every agent follows*, the same for every product: `agents/` (how to build UI here), `skills/` (step by
   step instructions for each kind of work), `standards/` (what good work is, everywhere), and `knowledge/` (these pages).

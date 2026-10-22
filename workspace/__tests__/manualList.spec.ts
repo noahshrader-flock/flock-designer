@@ -20,18 +20,18 @@ const ledger = (source: CellResult[], violations: AccessibilityIssue[] = [], vie
 		key: 'app',
 		of: 'Shop’s app in design mode',
 		result: result(violations),
-		resultFile: 'projects/shop/accessibility/app.json',
-		views: [{ state: 'Home', results: views, evidence: 'projects/shop/accessibility/app/home/cells.json' }],
+		resultFile: 'prototypes/shop/accessibility/app.json',
+		views: [{ state: 'Home', results: views, evidence: 'prototypes/shop/accessibility/app/home/cells.json' }],
 		source,
-		sourceFile: 'projects/shop/accessibility/app/source.json',
+		sourceFile: 'prototypes/shop/accessibility/app/source.json',
 		target,
 		depth: 'full',
 		run: RUN,
 	});
 const ARGS = [
-	'flock-designer/projects/shop/accessibility/app.ledger.json',
-	'flock-designer/projects/shop/accessibility/app',
-	'flock-designer/projects/shop/accessibility/returned.md',
+	'flock-designer/prototypes/shop/accessibility/app.ledger.json',
+	'flock-designer/prototypes/shop/accessibility/app',
+	'flock-designer/prototypes/shop/accessibility/returned.md',
 ] as const;
 const list = (l: Ledger) => manualSection(l, ...ARGS);
 
@@ -58,7 +58,7 @@ describe('the manual list', () => {
 	it('says what machines already did, and that it is not a pass, with every criterion left unmeasured and why', () => {
 		expect(text).toMatch(/Found by a machine, at the target: 1\.1\.1 Non-text Content; 2\.2\.1 Timing Adjustable; 4\.1\.2 Name, Role, Value\./);
 		expect(text).toContain('  - 1.4.10 Reflow: not run, because reflow, in Home: the time was used up');
-		expect(text).toContain('`flock-designer/projects/shop/accessibility/app/`');
+		expect(text).toContain('`flock-designer/prototypes/shop/accessibility/app/`');
 		for (const line of text.split('\n').filter((x) => /not run/i.test(x))) expect(line).toMatch(/\bbecause\b/);
 		expect(text).not.toMatch(/\b(conforms to|compliant|passes)\b/i);
 	});
@@ -98,7 +98,7 @@ describe('the manual list', () => {
 		expect(text).toContain('- 1.1.1 Non-text Content: image-alt, in Home. Write the text each needs, or mark it decorative.');
 		expect(text).not.toMatch(/Words to write[\s\S]*button-name/);
 		expect(text).toMatch(/Decided by the page around the work[^\n]*: 2\.4\.1 Bypass Blocks; 2\.4\.5 Multiple Ways; 3\.2\.3 Consistent Navigation/);
-		expect(text).toContain('Add each to `flock-designer/projects/shop/accessibility/returned.md`, one row each');
+		expect(text).toContain('Add each to `flock-designer/prototypes/shop/accessibility/returned.md`, one row each');
 		expect(text).toContain('| Criterion | Page or state | Steps to reproduce | What was expected | Severity | Evidence | In this work |');
 	});
 });

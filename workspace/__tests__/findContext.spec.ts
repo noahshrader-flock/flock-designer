@@ -29,7 +29,7 @@ const product = (dir: string, pkg: string, folder?: string) => {
 const designSystem = (dir: string, name = '@acme/ui') => makeDesignSystem(dir, name);
 const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
-	mkdirSync(join(dir, 'projects'), { recursive: true });
+	mkdirSync(join(dir, 'prototypes'), { recursive: true });
 	return dir;
 };
 const at = (...p: string[]) => join(base, ...p);
@@ -42,7 +42,7 @@ describe('the context, from the open folders', () => {
 		expect(await findContext({ folders: [coke] })).toEqual({
 			product: coke,
 			designSystem: { root: at('GitHub', 'ui'), how: 'beside' },
-			designRepository: at('GitHub', 'flock-designer', 'projects'),
+			designRepository: at('GitHub', 'flock-designer', 'prototypes'),
 			productRepository: null,
 			source: { state: 'usable', root: at('GitHub', 'ui'), how: 'beside' },
 			missing: [],

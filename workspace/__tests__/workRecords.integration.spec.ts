@@ -92,7 +92,7 @@ describe('createCodebaseWork', () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', 'first try', 'develop');
 		// In the product checkout it would dirty the tree and block the next piece of work.
 		expect(existsSync(join(records, 'demo/work.json'))).toBe(true);
-		expect(existsSync(join(root, '.dsnr/projects/demo/work.json'))).toBe(false);
+		expect(existsSync(join(root, '.dsnr/prototypes/demo/work.json'))).toBe(false);
 		expect((await readCheckout(root)).clean).toBe(true);
 	});
 

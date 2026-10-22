@@ -88,8 +88,8 @@ describe('putting a brief in a folder', () => {
 
 describe('a project’s path', () => {
 	it('is built in one place, for the project and for a file in it', () => {
-		expect(projectDir('alpha')).toBe('projects/alpha');
-		expect(projectPath('alpha', 'brief.md')).toBe('projects/alpha/brief.md');
+		expect(projectDir('alpha')).toBe('prototypes/alpha');
+		expect(projectPath('alpha', 'brief.md')).toBe('prototypes/alpha/brief.md');
 	});
 });
 
@@ -112,10 +112,10 @@ describe('reading a project’s folder', () => {
 
 	it('is read from GitHub’s copy of the brief, in the same request as its title', async () => {
 		const { github, api } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64(FILED) },
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],
-			'/repos/acme/design/contents/projects/beta*': [],
-			'/repos/acme/design/contents/projects*': [
+			'/repos/acme/design/contents/prototypes/alpha/brief.md*': { sha: 'f1', content: b64(FILED) },
+			'/repos/acme/design/contents/prototypes/alpha*': [{ type: 'file', name: 'brief.md' }],
+			'/repos/acme/design/contents/prototypes/beta*': [],
+			'/repos/acme/design/contents/prototypes*': [
 				{ type: 'dir', name: 'alpha' },
 				{ type: 'dir', name: 'beta' },
 			],
@@ -163,42 +163,42 @@ describe('assigning a project a folder', () => {
 	};
 
 	it('writes the folder into the brief, saying so, and nothing else', async () => {
-		const { store, files, writes, messages } = said({ 'projects/alert-history/brief.md': BRIEF });
+		const { store, files, writes, messages } = said({ 'prototypes/alert-history/brief.md': BRIEF });
 		await assignFolder(store, 'alert-history', 'Admin');
-		expect(files['projects/alert-history/brief.md']).toBe(FILED);
-		expect(writes).toEqual(['projects/alert-history/brief.md']);
+		expect(files['prototypes/alert-history/brief.md']).toBe(FILED);
+		expect(writes).toEqual(['prototypes/alert-history/brief.md']);
 		expect(messages).toEqual(['alert-history: put in the folder Admin']);
 	});
 
 	it('takes it out of its folder', async () => {
-		const { store, files, messages } = said({ 'projects/alert-history/brief.md': FILED });
+		const { store, files, messages } = said({ 'prototypes/alert-history/brief.md': FILED });
 		await assignFolder(store, 'alert-history', null);
-		expect(files['projects/alert-history/brief.md']).toBe(BRIEF);
+		expect(files['prototypes/alert-history/brief.md']).toBe(BRIEF);
 		expect(messages).toEqual(['alert-history: taken out of its folder']);
 	});
 
 	it('writes nothing when the folder is the one it is in', async () => {
-		const { store, writes } = said({ 'projects/alert-history/brief.md': FILED });
+		const { store, writes } = said({ 'prototypes/alert-history/brief.md': FILED });
 		await assignFolder(store, 'alert-history', ' Admin ');
 		expect(writes).toEqual([]);
 	});
 
 	it('keeps the folder when a prototype is started on a project whose brief has a folder and no heading', async () => {
-		const { store, files } = said({ 'projects/alert-history/brief.md': '---\nfolder: Admin\n---\n' });
+		const { store, files } = said({ 'prototypes/alert-history/brief.md': '---\nfolder: Admin\n---\n' });
 		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null });
-		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
+		expect(files['prototypes/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
 	it('puts a new project in the folder it is started in', async () => {
 		const { store, files } = said({});
 		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
-		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
+		expect(files['prototypes/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
 	it('leaves a project that already has a brief where it is, when a new version is started in another folder', async () => {
-		const { store, files } = said({ 'projects/alert-history/brief.md': FILED });
+		const { store, files } = said({ 'prototypes/alert-history/brief.md': FILED });
 		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
-		expect(files['projects/alert-history/brief.md']).toBe(FILED);
+		expect(files['prototypes/alert-history/brief.md']).toBe(FILED);
 	});
 
 	it('refuses a project with no brief, which is where the folder is kept', async () => {
@@ -230,21 +230,21 @@ describe('renaming a project', () => {
 	};
 
 	it('writes the new name into its brief, saying so, and nothing else: its id and folder stay', async () => {
-		const { store, files, writes, messages } = said({ 'projects/alert-history/brief.md': FILED });
+		const { store, files, writes, messages } = said({ 'prototypes/alert-history/brief.md': FILED });
 		await renameProject(store, 'alert-history', '  Alerts  over time ');
-		expect(files['projects/alert-history/brief.md']).toBe(FILED.replace('# Alert history', '# Alerts over time'));
-		expect(writes).toEqual(['projects/alert-history/brief.md']);
+		expect(files['prototypes/alert-history/brief.md']).toBe(FILED.replace('# Alert history', '# Alerts over time'));
+		expect(writes).toEqual(['prototypes/alert-history/brief.md']);
 		expect(messages).toEqual(['alert-history: renamed to Alerts over time']);
 	});
 
 	it('writes nothing when the name is the one it has', async () => {
-		const { store, writes } = said({ 'projects/alert-history/brief.md': FILED });
+		const { store, writes } = said({ 'prototypes/alert-history/brief.md': FILED });
 		await renameProject(store, 'alert-history', ' Alert history ');
 		expect(writes).toEqual([]);
 	});
 
 	it('refuses no name, and a project with no brief, which is where its name is kept', async () => {
-		await expect(renameProject(said({ 'projects/alert-history/brief.md': FILED }).store, 'alert-history', '  ')).rejects.toThrow('Give it a name.');
+		await expect(renameProject(said({ 'prototypes/alert-history/brief.md': FILED }).store, 'alert-history', '  ')).rejects.toThrow('Give it a name.');
 		await expect(renameProject(said({}).store, 'alert-history', 'Alerts')).rejects.toThrow(
 			'alert-history has no brief, which is where its name is kept.',
 		);
@@ -259,10 +259,10 @@ describe('deleting a project', () => {
 		return { store: telling, files, removed, messages };
 	};
 	const PROJECT = {
-		'projects/alert-history/brief.md': FILED,
-		'projects/alert-history/work.json': '[]',
-		'projects/alert-history/prototypes/v1.html': '<p>',
-		'projects/alert-history-2/brief.md': '# Alert history two\n',
+		'prototypes/alert-history/brief.md': FILED,
+		'prototypes/alert-history/work.json': '[]',
+		'prototypes/alert-history/v1.html': '<p>',
+		'prototypes/alert-history-2/brief.md': '# Alert history two\n',
 	};
 
 	it('is asked for by its name as people see it, exactly, spaces at either end aside', () => {
@@ -275,9 +275,9 @@ describe('deleting a project', () => {
 	it('removes its whole folder, every version with it, as one change saying so, and nothing of another project', async () => {
 		const { store, files, removed, messages } = said({ ...PROJECT });
 		await deleteProject(store, 'alert-history', 'Alert history');
-		expect(removed).toEqual(['projects/alert-history']);
+		expect(removed).toEqual(['prototypes/alert-history']);
 		expect(messages).toEqual(['alert-history: deleted']);
-		expect(Object.keys(files)).toEqual(['projects/alert-history-2/brief.md']);
+		expect(Object.keys(files)).toEqual(['prototypes/alert-history-2/brief.md']);
 	});
 
 	it('refuses any other name, saying the one to type, and removes nothing', async () => {
@@ -288,9 +288,9 @@ describe('deleting a project', () => {
 	});
 
 	it('takes its id for its name when it has no brief, as the list shows it, and refuses a project that is not there', async () => {
-		const { store, removed } = said({ 'projects/zones/work.json': '[]' });
+		const { store, removed } = said({ 'prototypes/zones/work.json': '[]' });
 		await deleteProject(store, 'zones', 'zones');
-		expect(removed).toEqual(['projects/zones']);
+		expect(removed).toEqual(['prototypes/zones']);
 		await expect(deleteProject(said({}).store, 'zones', 'zones')).rejects.toThrow('There is no project zones to delete.');
 	});
 });

@@ -56,6 +56,6 @@ describe('ghApi', () => {
 		const gh = join(dir, 'gh');
 		writeFileSync(gh, `#!/bin/sh\ncase "$*" in *PUT*) echo '{}' ;; *) echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;; esac\n`);
 		chmodSync(gh, 0o755);
-		await expect(new RepoFiles(ghApi(gh), { owner: 'o', repo: 'r' }).writeFile('projects/x/a.md', 'a', 'm')).resolves.toBeUndefined();
+		await expect(new RepoFiles(ghApi(gh), { owner: 'o', repo: 'r' }).writeFile('prototypes/x/a.md', 'a', 'm')).resolves.toBeUndefined();
 	});
 });

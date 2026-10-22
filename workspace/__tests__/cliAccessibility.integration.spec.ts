@@ -65,8 +65,8 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 				'- VoiceOver with Safari, on macOS',
 			].join('\n'),
 		);
-		mkdirSync(join(world.design, 'projects', 'shop'), { recursive: true });
-		writeFileSync(join(world.design, 'projects', 'shop', 'work.json'), '[]\n');
+		mkdirSync(join(world.design, 'prototypes', 'shop'), { recursive: true });
+		writeFileSync(join(world.design, 'prototypes', 'shop', 'work.json'), '[]\n');
 
 		expect(await main(['accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 		const said = world.out.join('\n');
@@ -81,7 +81,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 			/Starting Test Product's app \(node serve\.cjs \d+\)[\s\S]*Checking Home \(\/\)[\s\S]*Checking Gone \(\/gone\)/,
 		);
 
-		const kept = JSON.parse(readFileSync(join(world.design, 'projects', 'shop', 'accessibility', 'app.json'), 'utf8')) as {
+		const kept = JSON.parse(readFileSync(join(world.design, 'prototypes', 'shop', 'accessibility', 'app.json'), 'utf8')) as {
 			pages: { name: string }[];
 			notOpened: { name: string }[];
 			result: { ran: { states: string[]; target: string }; violations: { rule: string }[] };
@@ -94,22 +94,22 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(said).toMatch(
 			/Not run:\n- \*\*key-shortcuts\*\* \(WCAG 2\.1\.4 Character Key Shortcuts\): this checkout's remote names no default branch/,
 		);
-		const evidence = join(world.design, 'projects', 'shop', 'accessibility', 'app');
+		const evidence = join(world.design, 'prototypes', 'shop', 'accessibility', 'app');
 		for (const file of ['home/tree.json', 'home/tab.json', 'devices/reflow-320.jpg', 'devices/cells.json', 'source.json'])
 			expect(existsSync(join(evidence, file)), file).toBe(true);
 		const probe = (kept as unknown as { probe: { depth: string; views: { state: string; evidence: string }[] } }).probe;
 		expect(probe.depth).toBe('full');
 		expect(probe.views.map((v) => [v.state, v.evidence])).toEqual([
-			['Home', 'projects/shop/accessibility/app/home'],
-			['Devices', 'projects/shop/accessibility/app/devices'],
+			['Home', 'prototypes/shop/accessibility/app/home'],
+			['Devices', 'prototypes/shop/accessibility/app/devices'],
 		]);
 		await expect(fetch(`http://localhost:${port}/`)).rejects.toThrow();
 
-		const ledger = JSON.parse(readFileSync(join(world.design, 'projects', 'shop', 'accessibility', 'app.ledger.json'), 'utf8')) as {
+		const ledger = JSON.parse(readFileSync(join(world.design, 'prototypes', 'shop', 'accessibility', 'app.ledger.json'), 'utf8')) as {
 			rows: { sc: string; status: string }[];
 		};
 		expect(ledger.rows.find((r) => r.sc === '1.1.1')?.status).toBe('found');
-		const review = readFileSync(join(world.design, 'projects', 'shop', 'review.md'), 'utf8');
+		const review = readFileSync(join(world.design, 'prototypes', 'shop', 'review.md'), 'utf8');
 		expect(review).toContain("## Accessibility: Test Product's app in design mode");
 		expect(review).toContain('| 5 | Accessible names | 4.1.2 Name, Role, Value:');
 		expect(said).toContain('This is the first run of this measure: there is no ledger to compare with.');
@@ -120,7 +120,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		);
 		expect(handoff).toContain('- The pages measured: Home (`/`), Devices (`/devices?tab=list`), Broken (`/broken`), Gone (`/gone`).');
 		expect(handoff).toContain('Cover at least what the product names: VoiceOver with Safari, on macOS.');
-		expect(handoff).toContain('Add each to `flock-designer/projects/shop/accessibility/returned.md`');
+		expect(handoff).toContain('Add each to `flock-designer/prototypes/shop/accessibility/returned.md`');
 		world.out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 		expect(world.out.join('\n')).toMatch(/every status rests on its evidence, and review\.md and HANDOFF\.md say what the ledger says/);
@@ -132,10 +132,10 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		rmSync(join(evidence, 'home', 'cells.json'));
 		world.out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
-		expect(world.out.join('\n')).toMatch(/rests on projects\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
-		writeFileSync(join(world.design, 'projects', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
+		expect(world.out.join('\n')).toMatch(/rests on prototypes\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
+		writeFileSync(join(world.design, 'prototypes', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
 		// One a machine missed, one it had found.
-		const returned = join(world.design, 'projects', 'shop', 'accessibility', 'returned.md');
+		const returned = join(world.design, 'prototypes', 'shop', 'accessibility', 'returned.md');
 		expect(readFileSync(returned, 'utf8')).toContain('| Criterion | Page or state | Steps to reproduce |');
 		writeFileSync(
 			returned,
@@ -158,12 +158,12 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(second).toContain(
 			"- WCAG 1.1.1, image-alt: add `a11y/useAltText` (Biome (its a11y rules)) to the product's lint, so it is caught as code is written.",
 		);
-		expect(readFileSync(join(world.design, 'projects', 'shop', 'accessibility', 'guards.md'), 'utf8')).toContain('a11y/useAltText');
+		expect(readFileSync(join(world.design, 'prototypes', 'shop', 'accessibility', 'guards.md'), 'utf8')).toContain('a11y/useAltText');
 		world.out = [];
 		expect(await main(['read-returned', '--project', 'shop'], deps(shop))).toBe(0);
 		expect(world.out.join('\n')).not.toMatch(/newly logged/);
 		expect(readFileSync(join(shop, '.dsnr', 'knowledge', 'agent-gaps.md'), 'utf8').match(/found by a tester/g)).toHaveLength(1);
-		expect(readFileSync(join(world.design, 'projects', 'shop', 'review.md'), 'utf8')).toContain('## Product parity\n\nFine.');
+		expect(readFileSync(join(world.design, 'prototypes', 'shop', 'review.md'), 'utf8')).toContain('## Product parity\n\nFine.');
 		world.out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 	}, 120_000);
@@ -186,7 +186,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(last.status).toBe(0);
 		expect(last.stdout).toMatch(/left after 2 rounds/);
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
-		const ledger = JSON.parse(readFileSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1.ledger.json'), 'utf8')) as {
+		const ledger = JSON.parse(readFileSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1.ledger.json'), 'utf8')) as {
 			depth: string;
 			rows: { sc: string; status: string; why?: string }[];
 		};
@@ -195,7 +195,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 			status: 'found',
 			why: expect.stringMatching(/sent it back 2 times, and it was still there/),
 		});
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'review.md'), 'utf8')).toMatch(
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'review.md'), 'utf8')).toMatch(
 			/4\.1\.2 Name, Role, Value: found \(.*\), left because the build's own check sent it back 2 times/,
 		);
 		world.out = [];
@@ -218,7 +218,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		// Changed after its check: what the check found is not of this page, so none of it is kept.
 		writeFileSync(source, 'export default () => <main><h1>Cameras</h1><button>Add camera</button></main>;\n');
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1.ledger.json'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1.ledger.json'))).toBe(false);
 		world.out = [];
 		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1'], deps(world.product))).toBe(1);
 		expect(world.out.at(-1)).toMatch(
@@ -237,7 +237,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(world.err.at(-1)).toBe(
 			`dsnr: Test Product's .dsnr/workspace.json declares no "design-mode" command that serves its app on a port, so DSNR cannot open it, and nothing was measured.`,
 		);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'accessibility'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility'))).toBe(false);
 	});
 
 	it('measures a prototype’s page in a real browser, and keeps it as the app keeps its check', async () => {
@@ -249,19 +249,19 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		const said = world.out.join('\n');
 		expect(said).toMatch(/^Measured demo v1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
-		const kept = JSON.parse(readFileSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1.json'), 'utf8')) as { result: unknown };
+		const kept = JSON.parse(readFileSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1.json'), 'utf8')) as { result: unknown };
 		expect((JSON.parse(readFileSync(join(world.prototypes, 'demo', 'v1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(
 			kept.result,
 		);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'tab.json'))).toBe(true);
-		expect(JSON.parse(readFileSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1', 'source.json'), 'utf8'))).toEqual(
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1', 'default', 'tab.json'))).toBe(true);
+		expect(JSON.parse(readFileSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1', 'source.json'), 'utf8'))).toEqual(
 			expect.arrayContaining([{ cell: 'dragging', sc: '2.5.7', status: 'none', findings: [] }]),
 		);
 		// A run leaves none of the last one's evidence.
 		world.out = [];
 		expect(await run('accessibility', '--project', 'demo', '--name', 'v1', '--light')).toBe(0);
 		expect(world.out.join('\n')).toMatch(/Probed at light depth \(8 of the 30 cells\)/);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'reflow-320.jpg'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1', 'default', 'reflow-320.jpg'))).toBe(false);
 		const env = { ...process.env, HOME: world.home, XDG_CONFIG_HOME: join(world.home, '.config'), APPDATA: join(world.home, 'AppData') };
 		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
 		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1'], {

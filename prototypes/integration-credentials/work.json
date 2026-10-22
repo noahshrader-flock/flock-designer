@@ -1,0 +1,23 @@
+[
+  {
+    "projectId": "integration-credentials",
+    "name": "v1",
+    "branch": "prototype/integration-credentials/v1",
+    "commit": null,
+    "createdAt": "2026-10-21T18:56:24.997Z",
+    "note": "Replace the Export CSV experience on the Integrations page with an in-browser Show Credentials modal where users can view and copy integration credentials (device, username, password) without downloading a file. Keep Credential Expiration and IP Allow List fields. Support many devices, search, copy one or all, and loading, empty, error and success states.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "feature/test-dsnr",
+      "commit": "5d6b3cc610b913a56829636acdd989f1fa716833",
+      "product": "flocksafety/flock-coke"
+    },
+    "cover": "2a38e9dbb0e2"
+  }
+]

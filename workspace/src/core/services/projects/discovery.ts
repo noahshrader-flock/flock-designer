@@ -5,6 +5,7 @@ import { type RepoRef, formatRepo, repoRefOf } from '../../../shared/repoRef';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
 import { readDescriptor } from './descriptor';
 import { GUIDE } from '../prototypes/prototype';
+import { PROTOTYPES_DIR } from '../../../shared/designPaths';
 import { errorText } from '../../../shared/result';
 
 /**
@@ -66,7 +67,7 @@ export const recordsRootFor = (
 	const found = [clones.at(formatRepo(repo)), join(productRoot, '..', repo.repo)].find(
 		(dir): dir is string => dir !== null && exists(join(dir, '.git')),
 	);
-	return found === undefined ? null : join(found, 'projects');
+	return found === undefined ? null : join(found, PROTOTYPES_DIR);
 };
 
 /** Said when `recordsRootFor` finds nothing: which repository, and the two ways to give it. */

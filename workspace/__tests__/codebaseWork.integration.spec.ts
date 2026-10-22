@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-const here = () => ({ canonical: product, descriptor: readDescriptor(product), recordsRoot: join(dir, 'flock-designer', 'projects') });
+const here = () => ({ canonical: product, descriptor: readDescriptor(product), recordsRoot: join(dir, 'flock-designer', 'prototypes') });
 const work = () => codebaseWork({ records: async () => [], login: () => null, written: (i) => i });
 
 describe("a project's codebase work", () => {

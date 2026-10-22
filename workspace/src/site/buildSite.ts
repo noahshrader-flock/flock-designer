@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import type { Work } from '../shared/contract';
 import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
-import { SHARED_DIR, SHARED_REF, sitePath } from '../shared/designPaths';
-import { newestVersionFirst } from '../shared/versionNames';
+import { PROTOTYPES_DIR, SHARED_DIR, SHARED_REF, SITE_PROTOTYPES, sitePath } from '../shared/designPaths';
+import { isVersionName, newestVersionFirst } from '../shared/versionNames';
 import { workLabel } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { workInFolder } from '../core/services/projects/workRecords';
@@ -49,6 +49,8 @@ export interface SiteSummary {
 
 /** Left in a folder this wrote, so it is only ever this that clears it. */
 const MARK = '.flock-designer-site';
+/** From a version's page, `prototype/<id>/<version>/`, back to the site's root. */
+const SITE_ROOT = '../../../';
 
 interface Page {
 	record: Work;
@@ -69,7 +71,7 @@ const dateOf = (iso: string | undefined): string | null => {
 };
 
 const readProjects = (designRoot: string): SiteProject[] => {
-	const projectsDir = join(designRoot, 'projects');
+	const projectsDir = join(designRoot, PROTOTYPES_DIR);
 	const ids = existsSync(projectsDir)
 		? readdirSync(projectsDir, { withFileTypes: true })
 				.filter((e) => e.isDirectory() && !e.name.startsWith('_'))
@@ -82,9 +84,8 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		const records = workInFolder(dir);
 		if (records === null) return [];
 		const pages = records.flatMap((record): Page[] => {
-			const at = sitePath(id, record.name);
-			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
-			return at && saved ? [{ record, path: at.slice(id.length + 1) }] : [];
+			const saved = isVersionName(record.name) && existsSync(join(dir, `${record.name}.html`));
+			return saved ? [{ record, path: `${record.name}/` }] : [];
 		});
 		if (pages.length === 0) return [];
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';
@@ -174,7 +175,7 @@ const indexPage = (projects: SiteProject[], head = ''): string =>
 						.sort()
 						.at(-1),
 				);
-				return `<li><a href="${p.id}/${(p.versions[0] as Page).path}"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${updated ? ` · ${updated}` : ''}</span></a></li>`;
+				return `<li><a href="${sitePath(p.id, (p.versions[0] as Page).record.name)}"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${updated ? ` · ${updated}` : ''}</span></a></li>`;
 			})
 			.join('\n')}\n</ul>\n</main>`,
 		head,
@@ -189,7 +190,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		name: current.record.name,
 		title: p.title,
 		projectHref: '../',
-		prototypesHref: '../../',
+		prototypesHref: SITE_ROOT,
 		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}`, ...(pg.record.from ? { from: pg.record.from } : {}) })),
 		states,
 		page,
@@ -197,7 +198,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 
 const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): string =>
 	pagesAt
-		? `src="${escapeHtml(`${pagesAt}${p.id}/${page.path}page.html`)}" sandbox="${SANDBOX_APART}"`
+		? `src="${escapeHtml(`${pagesAt}${sitePath(p.id, page.record.name)}page.html`)}" sandbox="${SANDBOX_APART}"`
 		: `src="page.html" sandbox="${SANDBOX_BESIDE}"`;
 
 /**
@@ -214,11 +215,11 @@ const viewerPage = (
 	signIn: string,
 ): string => {
 	const head = viewer
-		? `${signIn}<link rel="stylesheet" href="../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states, page)}<script type="module" src="../../_viewer/viewer.js"></script>\n`
+		? `${signIn}<link rel="stylesheet" href="${SITE_ROOT}_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states, page)}<script type="module" src="${SITE_ROOT}_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">All prototypes</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
+		`<div class="viewer">\n<header id="dsnr-bar"><a href="${SITE_ROOT}">All prototypes</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };
@@ -249,23 +250,23 @@ export const buildSite = ({ designRoot, outDir, viewer, pagesAt, signIn: signing
 	}
 	// A page sits two folders down (<project>/v2/), and finds the shared files from there.
 	const relink = (html: string): string =>
-		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../_shared/${shared.get(hash)}` : whole)));
+		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `${SITE_ROOT}_shared/${shared.get(hash)}` : whole)));
 	/** First in the head, before the prototype's own code, so the bar asks it for the pins rather than reaching into the page. */
 	const withAgent = (html: string): string => {
 		if (!viewer) return html;
-		return firstInHead(html, `<script src="../../_viewer/${PAGE_AGENT}"></script>`);
+		return firstInHead(html, `<script src="${SITE_ROOT}_viewer/${PAGE_AGENT}"></script>`);
 	};
 
 	const signIn = signInScript(viewer, signingIn);
 	// The front page is where GitHub sends a person back after signing in: it carries the viewer to finish it.
 	writeFileSync(join(outDir, 'index.html'), indexPage(projects, signIn ? `${signIn}<script type="module" src="_viewer/viewer.js"></script>\n` : ''));
 	for (const p of projects) {
-		const dir = join(outDir, p.id);
+		const dir = join(outDir, SITE_PROTOTYPES, p.id);
 		mkdirSync(dir, { recursive: true });
 		for (const pg of p.versions) {
 			const at = join(dir, pg.path);
 			mkdirSync(at, { recursive: true });
-			const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
+			const html = readFileSync(join(designRoot, PROTOTYPES_DIR, p.id, `${pg.record.name}.html`), 'utf8');
 			writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), contentHashOf(html), pagesAt, signIn));
 			writeFileSync(join(at, 'page.html'), relink(html));
 		}

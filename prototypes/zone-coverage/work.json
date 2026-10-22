@@ -1,0 +1,62 @@
+[
+  {
+    "projectId": "zone-coverage",
+    "name": "v1",
+    "branch": "prototype/zone-coverage/v1",
+    "commit": null,
+    "createdAt": "2026-10-09T11:46:32.643Z",
+    "note": "A Zone coverage page under Zones in the admin area. An admin sees every zone in their organization as a table: zone name, number of cameras in the zone, number of those cameras that are offline, and when the zone last had an alert. A search box for zones, a filter for has offline cameras, and an empty state when no zone matches the search or filter.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
+    },
+    "cover": "4ebc6edd74a1"
+  },
+  {
+    "projectId": "zone-coverage",
+    "name": "v2",
+    "branch": "prototype/zone-coverage/v2",
+    "commit": null,
+    "createdAt": "2026-10-09T11:57:51.353Z",
+    "note": "Version 2, a different idea from the table: show each zone as a card instead of a table row. Each card has a health status at the top: healthy, degraded, or offline. The offline cameras are listed on the card itself, so an admin can see what is wrong without opening the zone. Cards are grouped by status, worst first (offline, then degraded, then healthy). Keep the empty state for when no zone matches, and keep the search box and the 'has offline cameras' filter from the original request.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
+    },
+    "cover": "2b873ab008a1"
+  },
+  {
+    "projectId": "zone-coverage",
+    "name": "v3",
+    "branch": "prototype/zone-coverage/v3",
+    "commit": null,
+    "createdAt": "2026-10-09T12:03:03.061Z",
+    "note": "Version 3, based on Version 2 (start from ../flock-designer/projects/zone-coverage/prototypes/v2-i1.tsx). Keep the cards grouped by health, worst first, unchanged. Add a Fix action on each offline camera listed on a card. Fix opens a small side panel showing that camera's last-seen time, its network status, and a Notify the site contact button. The panel's data is mocked. Also show the panel's empty state (no data for the camera) and its error state (loading the camera details fails, with a retry), reachable through the state switcher and the ?state= query like the other versions. The Notify the site contact button only pretends: it sends nothing and shows a confirmation, labelled as a stand-in for engineering.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "becdfc67bd0fb50864825d4fc8cdb4fcdf53e0f8"
+    },
+    "cover": "60473c5ca3bd"
+  }
+]

@@ -38,24 +38,24 @@ describe('readFile and writeFile', () => {
 
 	it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/x/prototypes/v1.html*': { encoding: 'none', content: '', sha: 'big1' },
+			'/repos/acme/design/contents/prototypes/x/v1.html*': { encoding: 'none', content: '', sha: 'big1' },
 			'/repos/acme/design/git/blobs/big1*': { sha: 'f1', content: b64('<html>a large page</html>'), encoding: 'base64' },
 		});
-		expect(await new RepoFiles(session, REF).readFile('projects/x/prototypes/v1.html')).toBe('<html>a large page</html>');
+		expect(await new RepoFiles(session, REF).readFile('prototypes/x/v1.html')).toBe('<html>a large page</html>');
 	});
 
 	it('creates a file, and replaces one with the sha it has', async () => {
 		const { github, writes } = fakeGitHub({
 			'PUT /repos/acme/design/contents/*': {},
-			'GET /repos/acme/design/contents/projects/x/new.html*': notFound,
+			'GET /repos/acme/design/contents/prototypes/x/new.html*': notFound,
 			'GET /repos/acme/design/contents/*': { sha: 'abc' },
 		});
 		const repo = new RepoFiles(github, REF);
-		await repo.writeFile('projects/x/new.html', '<p>', 'm');
-		await repo.writeFile('projects/x/old.html', '<p>', 'm');
+		await repo.writeFile('prototypes/x/new.html', '<p>', 'm');
+		await repo.writeFile('prototypes/x/old.html', '<p>', 'm');
 		expect(writes).toEqual([
-			{ method: 'PUT', path: '/repos/acme/design/contents/projects/x/new.html', body: { message: 'm', content: b64('<p>') } },
-			{ method: 'PUT', path: '/repos/acme/design/contents/projects/x/old.html', body: { message: 'm', content: b64('<p>'), sha: 'abc' } },
+			{ method: 'PUT', path: '/repos/acme/design/contents/prototypes/x/new.html', body: { message: 'm', content: b64('<p>') } },
+			{ method: 'PUT', path: '/repos/acme/design/contents/prototypes/x/old.html', body: { message: 'm', content: b64('<p>'), sha: 'abc' } },
 		]);
 	});
 
@@ -68,7 +68,7 @@ describe('readFile and writeFile', () => {
 			},
 			'GET /repos/acme/design/contents/*': () => ({ sha: puts === 0 ? 'abc' : 'abd' }),
 		});
-		await new RepoFiles(github, REF).writeFile('projects/x/a.html', '<p>', 'm');
+		await new RepoFiles(github, REF).writeFile('prototypes/x/a.html', '<p>', 'm');
 		expect(writes.map((w) => (w.body as { sha?: string }).sha)).toEqual(['abc', 'abd']);
 	});
 
@@ -76,24 +76,24 @@ describe('readFile and writeFile', () => {
 		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x80, 0xfe]);
 		const { github, writes } = fakeGitHub({
 			'PUT /repos/acme/design/contents/*': {},
-			'GET /repos/acme/design/contents/projects/x/covers/there.jpg*': { sha: 's1', content: jpeg.toString('base64'), encoding: 'base64' },
+			'GET /repos/acme/design/contents/prototypes/x/covers/there.jpg*': { sha: 's1', content: jpeg.toString('base64'), encoding: 'base64' },
 			'GET /repos/acme/design/contents/*': notFound,
 		});
 		const repo = new RepoFiles(github, REF);
-		await repo.writeFile('projects/x/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+		await repo.writeFile('prototypes/x/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
 		expect(writes).toEqual([
 			{
 				method: 'PUT',
-				path: '/repos/acme/design/contents/projects/x/covers/v1-aaaaaaaaaaaa.jpg',
+				path: '/repos/acme/design/contents/prototypes/x/covers/v1-aaaaaaaaaaaa.jpg',
 				body: { message: 'm', content: jpeg.toString('base64') },
 			},
 		]);
-		expect(await repo.readBytes('projects/x/covers/there.jpg')).toEqual(jpeg);
-		expect(await repo.readBytes('projects/x/covers/none.jpg')).toBeNull();
+		expect(await repo.readBytes('prototypes/x/covers/there.jpg')).toEqual(jpeg);
+		expect(await repo.readBytes('prototypes/x/covers/none.jpg')).toBeNull();
 	});
 
 	it('says what access is needed when GitHub refuses the write', async () => {
-		await expect(new RepoFiles(fakeGitHub({ '*': notFound }).github, REF).writeFile('projects/x/a.html', 'x', 'm')).rejects.toThrow(
+		await expect(new RepoFiles(fakeGitHub({ '*': notFound }).github, REF).writeFile('prototypes/x/a.html', 'x', 'm')).rejects.toThrow(
 			/write access to acme\/design/,
 		);
 	});
@@ -103,11 +103,11 @@ describe('history', () => {
 	it('asks for the commits that changed a path, on a branch or commit when one is named, as many as are wanted', async () => {
 		const { github, calls } = fakeGitHub({ '/repos/acme/design/commits?*': [{ sha: 'c1' }] });
 		const repo = new RepoFiles(github, REF);
-		expect(await repo.commits('projects/a b')).toEqual([{ sha: 'c1' }]);
-		await repo.commits('projects/x', { at: 'main', limit: 1 });
+		expect(await repo.commits('prototypes/a b')).toEqual([{ sha: 'c1' }]);
+		await repo.commits('prototypes/x', { at: 'main', limit: 1 });
 		expect(calls.map((c) => c.path)).toEqual([
-			'/repos/acme/design/commits?path=projects%2Fa%20b&per_page=100',
-			'/repos/acme/design/commits?path=projects%2Fx&sha=main&per_page=1',
+			'/repos/acme/design/commits?path=prototypes%2Fa%20b&per_page=100',
+			'/repos/acme/design/commits?path=prototypes%2Fx&sha=main&per_page=1',
 		]);
 	});
 });
@@ -116,10 +116,10 @@ describe('removeFolder', () => {
 	const TREE = {
 		truncated: false,
 		tree: [
-			{ path: 'projects/x', type: 'tree', mode: '040000' },
-			{ path: 'projects/x/brief.md', type: 'blob', mode: '100644' },
-			{ path: 'projects/x/prototypes/v1.html', type: 'blob', mode: '100644' },
-			{ path: 'projects/x-2/brief.md', type: 'blob', mode: '100644' },
+			{ path: 'prototypes/x', type: 'tree', mode: '040000' },
+			{ path: 'prototypes/x/brief.md', type: 'blob', mode: '100644' },
+			{ path: 'prototypes/x/v1.html', type: 'blob', mode: '100644' },
+			{ path: 'prototypes/x-2/brief.md', type: 'blob', mode: '100644' },
 		],
 	};
 	const routes = (patch: () => unknown = () => ({})) => ({
@@ -134,7 +134,7 @@ describe('removeFolder', () => {
 
 	it('is one commit on the default branch with every file under the folder gone, and nothing of a folder beside it', async () => {
 		const { github, writes } = fakeGitHub(routes());
-		await new RepoFiles(github, REF).removeFolder('projects/x', 'x: deleted');
+		await new RepoFiles(github, REF).removeFolder('prototypes/x', 'x: deleted');
 		expect(writes).toEqual([
 			{
 				method: 'POST',
@@ -142,8 +142,8 @@ describe('removeFolder', () => {
 				body: {
 					base_tree: 'tree1',
 					tree: [
-						{ path: 'projects/x/brief.md', mode: '100644', type: 'blob', sha: null },
-						{ path: 'projects/x/prototypes/v1.html', mode: '100644', type: 'blob', sha: null },
+						{ path: 'prototypes/x/brief.md', mode: '100644', type: 'blob', sha: null },
+						{ path: 'prototypes/x/v1.html', mode: '100644', type: 'blob', sha: null },
 					],
 				},
 			},
@@ -154,7 +154,7 @@ describe('removeFolder', () => {
 
 	it('makes nothing when the folder has no files', async () => {
 		const { github, writes } = fakeGitHub(routes());
-		await new RepoFiles(github, REF).removeFolder('projects/none', 'm');
+		await new RepoFiles(github, REF).removeFolder('prototypes/none', 'm');
 		expect(writes).toEqual([]);
 	});
 
@@ -166,19 +166,19 @@ describe('removeFolder', () => {
 				return {};
 			}),
 		);
-		await new RepoFiles(github, REF).removeFolder('projects/x', 'm');
+		await new RepoFiles(github, REF).removeFolder('prototypes/x', 'm');
 		expect(writes.filter((w) => w.method === 'PATCH')).toHaveLength(2);
 		expect(writes.every((w) => (w.body as { force?: boolean }).force !== true)).toBe(true);
 	});
 
 	it('says write access is needed when GitHub refuses it', async () => {
 		const { github } = fakeGitHub(routes(refusing(403)));
-		await expect(new RepoFiles(github, REF).removeFolder('projects/x', 'm')).rejects.toThrow('Saving needs write access to acme/design.');
+		await expect(new RepoFiles(github, REF).removeFolder('prototypes/x', 'm')).rejects.toThrow('Saving needs write access to acme/design.');
 	});
 
 	it('deletes nothing when GitHub cannot list the whole repository', async () => {
 		const { github, writes } = fakeGitHub({ ...routes(), 'GET /repos/acme/design/git/trees/tree1?recursive=1': { ...TREE, truncated: true } });
-		await expect(new RepoFiles(github, REF).removeFolder('projects/x', 'm')).rejects.toThrow('so projects/x was not deleted');
+		await expect(new RepoFiles(github, REF).removeFolder('prototypes/x', 'm')).rejects.toThrow('so prototypes/x was not deleted');
 		expect(writes).toEqual([]);
 	});
 });

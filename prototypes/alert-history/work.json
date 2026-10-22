@@ -1,0 +1,51 @@
+[
+  {
+    "projectId": "alert-history",
+    "name": "v1",
+    "branch": "prototype/alert-history/v1",
+    "commit": null,
+    "createdAt": "2026-10-08T12:08:24.685Z",
+    "note": "An \"Alert history\" view for the admin area: a table of recent alerts with a status filter, plus an empty state when the filter matches nothing. Mock data only. Prototype, not codebase work.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "8089eb7f3e07fff9967648aa6226f52a5d911abe"
+    },
+    "cover": "e34b718ccb2b"
+  },
+  {
+    "projectId": "alert-history",
+    "name": "v2",
+    "branch": "prototype/alert-history/v2",
+    "commit": null,
+    "createdAt": "2026-10-08T12:13:06.016Z",
+    "note": "A different idea for the Alert history view: alerts grouped by camera instead of a flat table. Still for the admin area, mock data only, prototype not codebase work. Keep a status filter and an empty state when the filter matches nothing.",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "8089eb7f3e07fff9967648aa6226f52a5d911abe"
+    },
+    "cover": "472e769b2b81"
+  },
+  {
+    "projectId": "alert-history",
+    "name": "codebase",
+    "branch": "feature/alert-history",
+    "commit": null,
+    "createdAt": "2026-10-09T04:01:12.810Z",
+    "note": "From prototype V2 \u00b7 I1",
+    "repository": "flocksafety/flock-coke"
+  }
+]

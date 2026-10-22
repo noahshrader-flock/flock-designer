@@ -11,7 +11,7 @@ the change themselves. That has already put a comment on a page the work never t
 
 ## What to write
 
-In the design repository, `projects/<project-id>/work.json`, on the `codebase` entry, add a
+In the design repository, `prototypes/<project-id>/work.json`, on the `codebase` entry, add a
 `route`: the path within the running app where the work is reached.
 
 ```json

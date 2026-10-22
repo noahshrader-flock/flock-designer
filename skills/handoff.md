@@ -42,7 +42,7 @@ with different evidence. The reviewers are shared, `../agents/product-parity-rev
   still going is lost.
 - If subagents are not available, read each definition and follow it directly, one at a time, and say
   that you did. A review of your own work is weaker than a second reader, and much stronger than none.
-- **Write both into the project's review record** (`projects/<id>/review.md` in the design repository).
+- **Write both into the project's review record** (`prototypes/<id>/review.md` in the design repository).
   Its **accessibility section is written by `dsnr accessibility`** from what it measured, between its
   `<!-- dsnr:accessibility <what it measured> -->` lines: never edit it, as `dsnr check-accessibility`
   refuses a section that is not the measure's. Put what each review found about accessibility under that

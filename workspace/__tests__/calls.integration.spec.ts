@@ -142,7 +142,7 @@ const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, ro
 const codebaseWork = async () => {
 	const { createCodebaseWork } = await import('../src/core/services/projects/workRecords');
 	const { readDescriptor } = await import('../src/core/services/projects/descriptor');
-	await createCodebaseWork(product, join(design, 'projects'), readDescriptor(product), 'demo', 'x', 'develop');
+	await createCodebaseWork(product, join(design, 'prototypes'), readDescriptor(product), 'demo', 'x', 'develop');
 };
 
 let registerCalls: (typeof import('../src/core/calls'))['registerCalls'];
@@ -176,7 +176,7 @@ const world = madeOnce((d) => {
 	]);
 	const designRepo = join(d, 'GitHub', 'flock-designer');
 	mkdirSync(join(designRepo, '.git'), { recursive: true });
-	mkdirSync(join(designRepo, 'projects'), { recursive: true });
+	mkdirSync(join(designRepo, 'prototypes'), { recursive: true });
 	addStandards(designRepo);
 	// What a prototype's task is built from, as every design repository has.
 	mkdirSync(join(designRepo, 'skills'), { recursive: true });
@@ -468,9 +468,9 @@ describe('codebase work recorded before records named its repository', () => {
 	it('is linked to the repository of the checkout it is on, when that checkout is here', async () => {
 		g(product, 'remote', 'add', 'origin', 'https://github.com/flocksafety/flock-coke.git');
 		await trustFolder(product);
-		mkdirSync(join(design, 'projects', 'old-work'), { recursive: true });
+		mkdirSync(join(design, 'prototypes', 'old-work'), { recursive: true });
 		writeFileSync(
-			join(design, 'projects', 'old-work', 'work.json'),
+			join(design, 'prototypes', 'old-work', 'work.json'),
 			JSON.stringify([
 				{ projectId: 'old-work', name: 'codebase', branch: 'feature/old-work', commit: null, createdAt: '2026-09-01T00:00:00Z', note: '' },
 			]),
@@ -524,7 +524,7 @@ describe('listProjects', () => {
 	});
 
 	it('reads nothing from a repository that was never accepted', async () => {
-		writeFileSync(join(design, 'projects', 'x.txt'), 'x');
+		writeFileSync(join(design, 'prototypes', 'x.txt'), 'x');
 		const r = await call(CHANNELS.listProjects);
 		expect(r.ok).toBe(true);
 		expect(r.value).toEqual([]);
@@ -644,7 +644,7 @@ describe('prototypes', () => {
 				writeFileSync(file, text);
 				utimesSync(file, start + at, start + at);
 			};
-			const sourceSaved = () => readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.tsx'), 'utf8');
+			const sourceSaved = () => readFileSync(join(design, 'prototypes', 'demo', 'v1.tsx'), 'utf8');
 			expect(await saveBuilt()).toBe('waiting');
 			write(source, "import { Hello } from 'x';\nexport default () => <Hello />;\n", 100);
 			expect(await saveBuilt()).toBe('waiting');
@@ -664,7 +664,7 @@ describe('prototypes', () => {
 			await made();
 			const source = join(home, 'prototype', 'demo', 'v1.tsx');
 			const built = join(home, 'prototype', 'demo', 'v1.html');
-			const savedSource = join(design, 'projects', 'demo', 'prototypes', 'v1.tsx');
+			const savedSource = join(design, 'prototypes', 'demo', 'v1.tsx');
 			const start = Math.floor(Date.now() / 1000);
 			const write = (file: string, text: string, at: number) => {
 				writeFileSync(file, text);
@@ -678,7 +678,7 @@ describe('prototypes', () => {
 			write(source, "import { Hello } from 'x';\nexport default () => <><Hello /><p>mine</p></>;\n", 200);
 			write(built, '<html>built again</html>', 201);
 			const answered = (await call(CHANNELS.saveBuilt, 'demo', 'v1')).value as { refused: string };
-			expect(answered.refused).toContain('projects/demo/prototypes/v1.tsx');
+			expect(answered.refused).toContain('prototypes/demo/v1.tsx');
 			expect(answered.refused).toContain('--replace');
 			expect(readFileSync(savedSource, 'utf8')).toBe('theirs\n');
 			// And it is told again, not saved, however often it is asked.
@@ -717,7 +717,7 @@ describe('prototypes', () => {
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), 'export default () => null;\n');
 			await firstSaved();
 			const recorded = () =>
-				(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { basedOn: { commit: string } }[])[0]?.basedOn.commit;
+				(JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as { basedOn: { commit: string } }[])[0]?.basedOn.commit;
 			const was = g(product, 'rev-parse', 'develop');
 			expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).value).toEqual({ branch: 'develop', commit: was, latest: was, behind: 0 });
 			expect((await refresh()).error).toBe('Version 1 is already modeled on the latest of develop.');
@@ -843,7 +843,7 @@ describe('prototypes', () => {
 		await firstSaved();
 		// Someone with write access to the design repository puts an option where the branch belongs.
 		const written = join(home, 'written-by-git');
-		const records = join(design, 'projects', 'demo', 'work.json');
+		const records = join(design, 'prototypes', 'demo', 'work.json');
 		const list = JSON.parse(readFileSync(records, 'utf8')) as { basedOn: { branch: string } }[];
 		list[0]!.basedOn.branch = `--output=${written}`;
 		writeFileSync(records, JSON.stringify(list));
@@ -879,16 +879,16 @@ describe('prototypes', () => {
 		const r = await startByCommand();
 		expect(r.code).not.toBe(0);
 		expect(r.said).toMatch(/npm ci/);
-		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo'))).toBe(false);
 	});
 
 	it('are put in a folder and taken out of it, in the brief in the clone, and a project that is not one is refused', async () => {
 		await trustFolder(product);
 		await started();
 		expect((await call(CHANNELS.assignFolder, 'demo', 'Roles')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Roles\n---\n# Demo\n\nA list\n');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Roles\n---\n# Demo\n\nA list\n');
 		expect((await call(CHANNELS.assignFolder, 'demo', null)).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 		mkdirSync(join(design, 'etc'), { recursive: true });
 		writeFileSync(join(design, 'etc', 'brief.md'), '# Not a project\n');
 		expect((await call(CHANNELS.assignFolder, '../etc', 'Roles')).ok).toBe(false);
@@ -901,9 +901,9 @@ describe('prototypes', () => {
 		await call(CHANNELS.assignFolder, 'demo', 'Admin');
 		await firstSaved();
 		expect((await call(CHANNELS.renameProject, 'demo', 'Demo, again')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Admin\n---\n# Demo, again\n\nA list\n');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Admin\n---\n# Demo, again\n\nA list\n');
 		// Its id is what its folder, links and comments are named by: it stays.
-		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'work.json'))).toBe(true);
 		expect((await call(CHANNELS.renameProject, 'demo', '   ')).error).toBe('Give it a name.');
 		expect((await call(CHANNELS.renameProject, '../etc', 'Roles')).ok).toBe(false);
 	});
@@ -916,7 +916,7 @@ describe('prototypes', () => {
 		await started();
 		await firstSaved();
 		expect((await call(CHANNELS.deleteProject, 'demo', 'demo')).error).toBe('Type Demo to delete it.');
-		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'work.json'))).toBe(true);
 		expect(emit).not.toHaveBeenCalledWith('onProjectDeleted', expect.anything());
 		const before = onPublishStatus.mock.calls.length;
 		// Its review threads on GitHub, and another project's, which is left alone.
@@ -931,7 +931,7 @@ describe('prototypes', () => {
 			[`DELETE ${repo}/issues/21/labels/*`]: [],
 		});
 		expect((await call(CHANNELS.deleteProject, 'demo', ' Demo ')).ok).toBe(true);
-		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo'))).toBe(false);
 		expect(emit).toHaveBeenCalledWith('onProjectDeleted', 'demo');
 		const wrote = githubApi.mock.calls
 			.filter(([, init]) => (init as { method?: string } | undefined)?.method)
@@ -950,15 +950,15 @@ describe('prototypes', () => {
 	it('are started with their brief and nothing recorded, shown as building, recorded once their first page is saved, and deleted with their start', async () => {
 		await trustFolder(product);
 		expect(await started()).toContain('Started demo v1:');
-		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
-		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(false);
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+		expect(existsSync(join(design, 'prototypes', 'demo', 'work.json'))).toBe(false);
 		const listed = async () => ((await call(CHANNELS.listProjects)).value as Project[]).find((p) => p.id === 'demo');
 		expect((await listed())?.work.map((i) => [i.name, i.building])).toEqual([['v1', true]]);
 		// A second start in the same project counts the first, though neither is recorded.
 		expect(await started({ note: 'Again' })).toContain('Started demo v2:');
 
 		await firstSaved();
-		const recorded = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; createdAt: string }[];
+		const recorded = JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as { name: string; createdAt: string }[];
 		expect(recorded.map((r) => r.name)).toEqual(['v1']);
 		expect((await listed())?.work.map((i) => [i.name, i.building ?? false])).toEqual([
 			['v2', true],
@@ -967,7 +967,7 @@ describe('prototypes', () => {
 
 		answer({ [`/repos/${formatRepo(DESIGN_REPO)}/issues?state=all*`]: [] });
 		expect((await call(CHANNELS.deleteProject, 'demo', 'Demo')).ok).toBe(true);
-		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo'))).toBe(false);
 		expect(await listed()).toBeUndefined();
 	});
 
@@ -979,7 +979,7 @@ describe('prototypes', () => {
 		const said = await call(CHANNELS.deleteProject, 'demo', 'Demo');
 		expect(said.ok).toBe(false);
 		expect(said.error).toMatch(/^demo is deleted, but its review issues on GitHub could not be closed: GitHub is down/);
-		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo'))).toBe(false);
 	});
 
 	it('save a start built here and never saved, when the list is read, as opening a page saves it', async () => {
@@ -994,8 +994,8 @@ describe('prototypes', () => {
 		utimesSync(join(dir, 'v1.html'), later, later);
 		const listed = ((await call(CHANNELS.listProjects)).value as Project[]).find((p) => p.id === 'demo');
 		expect(listed?.work.map((i) => [i.name, i.building ?? false])).toEqual([['v1', false]]);
-		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1.tsx'))).toBe(true);
-		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'v1.tsx'))).toBe(true);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'work.json'))).toBe(true);
 	});
 
 	it('are read from the clone alone while signed out, never asking GitHub for the records a start has not made yet', async () => {
@@ -1032,13 +1032,13 @@ describe('prototypes', () => {
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await trustFolder(product);
 		expect(await started()).toContain('Started demo v1:');
-		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(false);
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toBe('<h1>Demo</h1>');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1');
 		expect(shown).toMatchObject({ ok: true, value: { states: [] } });
@@ -1103,7 +1103,7 @@ describe('prototypes', () => {
 				[`${base}/actions/workflows/*`]: { workflow_runs: [{ status: 'completed' }] },
 				[`${base}/deployments?*`]: [{ id: 6, sha: deployed }],
 				[`${base}/deployments/6/statuses?per_page=1`]: [{ state: 'success' }],
-				[`${base}/compare/${deployed}...main`]: { files: [{ filename: 'projects/demo/prototypes/v1.html', status: 'modified' }] },
+				[`${base}/compare/${deployed}...main`]: { files: [{ filename: 'prototypes/demo/v1.html', status: 'modified' }] },
 				[`${base}/commits?*`]: [{ sha: 'c'.repeat(40) }],
 				[`${base}/compare/*`]: { status: 'behind' },
 			});
@@ -1195,9 +1195,9 @@ describe('prototypes', () => {
 		const comment = (id: number, body: string, author = 'pm') => reviewComment({ id, body, author, createdAt: '2026-10-07T00:00:00Z' });
 		const local = (name: string) => join(home, 'prototype', 'demo', `${name}.tsx`);
 		const builtPage = (name: string) => join(home, 'prototype', 'demo', `${name}.html`);
-		const saved = (file: string) => join(design, 'projects', 'demo', 'prototypes', file);
+		const saved = (file: string) => join(design, 'prototypes', 'demo', file);
 		const records = () =>
-			JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as {
+			JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as {
 				name: string;
 				contributors?: unknown;
 				basedOn?: unknown;
@@ -1319,7 +1319,7 @@ describe('prototypes', () => {
 		it('works from the saved source when the prototype was built on another machine', async () => {
 			await ready();
 			rmSync(local('v1'));
-			mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
+			mkdirSync(join(design, 'prototypes', 'demo'), { recursive: true });
 			writeFileSync(saved('v1.tsx'), 'export default () => "saved";\n');
 			threads({ v1: [comment(7, 'x', 'noah')] });
 			expect((await address(7)).ok).toBe(true);
@@ -1346,7 +1346,7 @@ describe('prototypes', () => {
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Built, left behind</h1>');
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
 	});
 
 	it('keep a large embedded file once beside the projects, and serve it beside the page', async () => {
@@ -1364,9 +1364,9 @@ describe('prototypes', () => {
 			);
 			expect((await call(CHANNELS.openPrototype, 'demo', name)).ok).toBe(true);
 		}
-		const kept = readdirSync(join(design, 'projects', '_shared'));
+		const kept = readdirSync(join(design, 'prototypes', '_shared'));
 		expect(kept).toHaveLength(1);
-		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), 'utf8');
+		const page = readFileSync(join(design, 'prototypes', 'demo', 'v2.html'), 'utf8');
 		expect(page).toContain(`/_shared/${kept[0]?.replace('.datauri', '')}`);
 		expect(page).not.toContain('A'.repeat(1000));
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v2');
@@ -1453,16 +1453,16 @@ describe('prototypes', () => {
 			const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop');
 			expect(r.ok).toBe(true);
 			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
-			const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; note: string }[];
+			const records = JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as { name: string; note: string }[];
 			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From Version 1 of the prototype');
 			const taskFile = join(home, 'prototype', 'demo', 'v1-into-code.md');
 			const task = readFileSync(taskFile, 'utf8');
 			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
 			expect(task).toContain('Audit first.');
 			expect(task).toContain(join(home, 'prototype', 'demo', 'v1.html'));
-			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1.md'));
+			expect(task).toContain(join(design, 'prototypes', 'demo', 'audit-v1.md'));
 			expect(task).toContain('# Record where the work is');
-			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*projects\/demo\/work\.json`/);
+			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*prototypes\/demo\/work\.json`/);
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');
 			const { value } = r as { value: { opened: null; command: string } };
@@ -1485,7 +1485,7 @@ describe('prototypes', () => {
 				const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1');
 				expect(r.ok).toBe(true);
 				expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
-				const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
+				const records = JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as { name: string }[];
 				expect(records.filter((i) => i.name === 'codebase')).toHaveLength(1);
 				const { value } = r as { value: { command: string } };
 				expect(value.command).toContain('Continue building Version 1 of the demo prototype');
@@ -1604,7 +1604,7 @@ describe('prototypes', () => {
 		const saved = await call(CHANNELS.openPrototype, 'demo', 'v1');
 		expect(saved.ok).toBe(false);
 		expect(saved.error).toMatch(/did not build[\s\S]*not-installed/);
-		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'v1.html'))).toBe(false);
 	});
 
 	it('refuse a base that is not a branch of an accepted repository', async () => {
@@ -1630,7 +1630,9 @@ describe('the picture of each prototype, on its project’s card', () => {
 	beforeEach(() => installDesignSystem(product));
 	const hashOf = async (html: string) => (await import('../src/core/services/prototypes/prototype')).contentHashOf(html);
 	const recordOf = (name: string) =>
-		(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as Array<Record<string, unknown>>).find((r) => r.name === name);
+		(JSON.parse(readFileSync(join(design, 'prototypes', 'demo', 'work.json'), 'utf8')) as Array<Record<string, unknown>>).find(
+			(r) => r.name === name,
+		);
 
 	it('is drawn once for each prototype built here, kept in the design repository, named on its record, and read back for the card', async () => {
 		await savedPrototype();
@@ -1638,7 +1640,7 @@ describe('the picture of each prototype, on its project’s card', () => {
 		const made = await call(CHANNELS.ensureCovers);
 		expect(made).toEqual({ ok: true, value: [{ projectId: 'demo', name: 'v1', cover }] });
 		expect(drawCover).toHaveBeenCalledWith(expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/demo\/v1/));
-		expect(readFileSync(join(design, 'projects', 'demo', 'covers', `v1-${cover}.jpg`))).toEqual(JPEG);
+		expect(readFileSync(join(design, 'prototypes', 'demo', 'covers', `v1-${cover}.jpg`))).toEqual(JPEG);
 		expect(recordOf('v1')?.cover).toBe(cover);
 		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
 		expect(drawCover).toHaveBeenCalledTimes(1);
@@ -1658,7 +1660,7 @@ describe('the picture of each prototype, on its project’s card', () => {
 		const second = await hashOf('<h1>Demo, changed</h1>');
 		expect((await call(CHANNELS.ensureCovers)).value).toEqual([{ projectId: 'demo', name: 'v1', cover: second }]);
 		expect(recordOf('v1')?.cover).toBe(second);
-		expect(readdirSync(join(design, 'projects', 'demo', 'covers')).sort()).toEqual([`v1-${first}.jpg`, `v1-${second}.jpg`].sort());
+		expect(readdirSync(join(design, 'prototypes', 'demo', 'covers')).sort()).toEqual([`v1-${first}.jpg`, `v1-${second}.jpg`].sort());
 	});
 
 	it('is not drawn for a prototype whose page was not built here, and is nothing when it cannot be drawn', async () => {
@@ -1670,7 +1672,7 @@ describe('the picture of each prototype, on its project’s card', () => {
 		drawCover.mockResolvedValue(null);
 		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
 		expect(recordOf('v1')?.cover).toBeUndefined();
-		expect(existsSync(join(design, 'projects', 'demo', 'covers'))).toBe(false);
+		expect(existsSync(join(design, 'prototypes', 'demo', 'covers'))).toBe(false);
 	});
 
 	it('is read from GitHub when this machine’s clone does not have it yet, and is nothing when neither has it', async () => {
@@ -1682,7 +1684,7 @@ describe('the picture of each prototype, on its project’s card', () => {
 			ok: true,
 			value: `data:image/jpeg;base64,${JPEG.toString('base64')}`,
 		});
-		expect(readBytes).toHaveBeenCalledWith('projects/demo/covers/v2-aaaaaaaaaaaa.jpg');
+		expect(readBytes).toHaveBeenCalledWith('prototypes/demo/covers/v2-aaaaaaaaaaaa.jpg');
 		expect(await call(CHANNELS.projectCover, 'demo', 'v3', 'aaaaaaaaaaaa')).toEqual({ ok: true, value: null });
 	});
 
@@ -1711,8 +1713,8 @@ describe('work an agent built in a terminal, with no record yet', () => {
 	it("shows a codebase branch once its project folder exists, with the folder's title, and not a teammate's ticket branch", async () => {
 		branchWithCommit('feature/new-view');
 		branchWithCommit('feature/dda-1221');
-		mkdirSync(join(design, 'projects', 'new-view'));
-		writeFileSync(join(design, 'projects', 'new-view', 'brief.md'), '# A new view\n');
+		mkdirSync(join(design, 'prototypes', 'new-view'));
+		writeFileSync(join(design, 'prototypes', 'new-view', 'brief.md'), '# A new view\n');
 		await trustFolder(product);
 
 		const r = await call(CHANNELS.listProjects);
@@ -1721,12 +1723,12 @@ describe('work an agent built in a terminal, with no record yet', () => {
 		expect(projects[0]).toMatchObject({ title: 'A new view', records: ['brief.md'] });
 		expect(projects[0]?.work).toEqual([expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' })]);
 		// Waited for, so the background record is not written into the next test's world.
-		await eventually(() => expect(existsSync(join(design, 'projects', 'new-view', 'work.json'))).toBe(true));
+		await eventually(() => expect(existsSync(join(design, 'prototypes', 'new-view', 'work.json'))).toBe(true));
 	});
 
 	it('does not show a project folder that has no work behind it yet', async () => {
-		mkdirSync(join(design, 'projects', 'only-notes'));
-		writeFileSync(join(design, 'projects', 'only-notes', 'brief.md'), '# Notes\n');
+		mkdirSync(join(design, 'prototypes', 'only-notes'));
+		writeFileSync(join(design, 'prototypes', 'only-notes', 'brief.md'), '# Notes\n');
 		await trustFolder(product);
 		expect((await call(CHANNELS.listProjects)).value).toEqual([]);
 	});
@@ -1915,7 +1917,7 @@ describe('Handoff', () => {
 
 	it('keeps a ready verdict on the work’s record, with the commit it was ready at, while nothing has been committed since', async () => {
 		const { readWork } = await import('../src/core/services/projects/workRecords');
-		const codebase = () => readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase');
+		const codebase = () => readWork(join(design, 'prototypes'), 'demo').find((work) => work.name === 'codebase');
 		await ready();
 		await call(CHANNELS.handOff, product, 'demo');
 		commit('HANDOFF.md', '**Ready for engineering**\n\nThe gate passes.\n');
@@ -1948,7 +1950,7 @@ describe('Handoff', () => {
 		commit('HANDOFF.md', 'Ready for engineering\n');
 		g(product, 'push', '-q', 'origin', 'feature/demo');
 		expect(await result()).toEqual({ state: 'done', verdict: 'ready', pushed: true, outside: ['.github/workflows/ci.yml', 'package-lock.json'] });
-		expect(readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase')?.readyAt).toBeUndefined();
+		expect(readWork(join(design, 'prototypes'), 'demo').find((work) => work.name === 'codebase')?.readyAt).toBeUndefined();
 	});
 });
 

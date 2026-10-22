@@ -1,0 +1,1472 @@
+{
+	"version": 2,
+	"key": "v1",
+	"of": "integration-credentials v1's page",
+	"at": "2026-10-21T19:48:40.894Z",
+	"target": "WCAG 2.0 Level A",
+	"axe": "4.14.0",
+	"depth": "light, at build",
+	"bestPractice": [
+		{
+			"rule": "heading-order",
+			"line": "heading-order: 1 element"
+		},
+		{
+			"rule": "landmark-one-main",
+			"line": "landmark-one-main: 1 element"
+		},
+		{
+			"rule": "region",
+			"line": "region: 15 elements"
+		}
+	],
+	"rows": [
+		{
+			"sc": "1.1.1",
+			"name": "Non-text Content",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": "alt text is meaningful; decorative vs informative",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": "charts or complex images",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.2.1",
+			"name": "Audio-only and Video-only (Prerecorded)",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "audio or video",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.2.2",
+			"name": "Captions (Prerecorded)",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "video",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.2.3",
+			"name": "Audio Description or Media Alternative (Prerecorded)",
+			"atTarget": true,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "video",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.2.4",
+			"name": "Captions (Live)",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "live media",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.2.5",
+			"name": "Audio Description (Prerecorded)",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "video",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.3.1",
+			"name": "Info and Relationships",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "success",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "large",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "structure",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json",
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/success/cells.json",
+				"projects/integration-credentials/accessibility/v1/large/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"person": "markup carries what the layout shows",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "1.3.2",
+			"name": "Meaningful Sequence",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "reading-order",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "reading-order was not run in this measure (at light, at build depth)",
+			"person": "whether a mismatch matters",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "1.3.3",
+			"name": "Sensory Characteristics",
+			"atTarget": true,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "copy that names shape, color or position",
+			"manual": null
+		},
+		{
+			"sc": "1.3.4",
+			"name": "Orientation",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "orientation",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "orientation was not run in this measure (at light, at build depth)",
+			"person": "content kept in both",
+			"manual": null
+		},
+		{
+			"sc": "1.3.5",
+			"name": "Identify Input Purpose",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "fields that collect personal data have a purpose",
+			"manual": null
+		},
+		{
+			"sc": "1.4.1",
+			"name": "Use of Color",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "color-only",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"why": "color-only was not run in this measure (at light, at build depth)",
+			"person": "state still readable",
+			"manual": null
+		},
+		{
+			"sc": "1.4.2",
+			"name": "Audio Control",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "audio",
+				"host": false
+			}
+		},
+		{
+			"sc": "1.4.3",
+			"name": "Contrast (Minimum)",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "contrast-states",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "contrast-states was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "1.4.4",
+			"name": "Resize Text",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "resize-text",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "resize-text was not run in this measure (at light, at build depth)",
+			"person": "loss of content",
+			"manual": null
+		},
+		{
+			"sc": "1.4.5",
+			"name": "Images of Text",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "text inside images",
+			"manual": null
+		},
+		{
+			"sc": "1.4.10",
+			"name": "Reflow",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "reflow",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "reflow was not run in this measure (at light, at build depth)",
+			"person": "loss of content or function",
+			"manual": null
+		},
+		{
+			"sc": "1.4.11",
+			"name": "Non-text Contrast",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "non-text-contrast",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "non-text-contrast was not run in this measure (at light, at build depth)",
+			"person": "which parts carry meaning",
+			"manual": null
+		},
+		{
+			"sc": "1.4.12",
+			"name": "Text Spacing",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "text-spacing",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "text-spacing was not run in this measure (at light, at build depth)",
+			"person": "loss of content",
+			"manual": null
+		},
+		{
+			"sc": "1.4.13",
+			"name": "Content on Hover or Focus",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "hover-content",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "hover-content was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.1.1",
+			"name": "Keyboard",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-operate",
+					"where": "every page",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-reach",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json",
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "keyboard-reach, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-reach, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-operate was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.1.2",
+			"name": "No Keyboard Trap",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "keyboard-trap",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "keyboard-trap, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-trap, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.1.4",
+			"name": "Character Key Shortcuts",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "key-shortcuts",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "key-shortcuts was not run in this measure (at light, at build depth)",
+			"person": "whether they can be turned off or remapped",
+			"manual": null
+		},
+		{
+			"sc": "2.2.1",
+			"name": "Timing Adjustable",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "timing",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"why": "timing was not run in this measure (at light, at build depth)",
+			"person": "whether the user can extend",
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "a time limit exists",
+				"host": false
+			}
+		},
+		{
+			"sc": "2.2.2",
+			"name": "Pause, Stop, Hide",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "pause-stop-hide",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"why": "pause-stop-hide was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.3.1",
+			"name": "Three Flashes or Below Threshold",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "flashing",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "flashing was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "flashing content or media",
+				"host": false
+			}
+		},
+		{
+			"sc": "2.4.1",
+			"name": "Bypass Blocks",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": null,
+				"host": true
+			}
+		},
+		{
+			"sc": "2.4.2",
+			"name": "Page Titled",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": "titles describe the page",
+			"manual": null
+		},
+		{
+			"sc": "2.4.3",
+			"name": "Focus Order",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-order",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "focus-order, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; focus-order, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
+			"person": "whether a mismatch matters",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "2.4.4",
+			"name": "Link Purpose (In Context)",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": "link purpose from its text and context",
+			"manual": null
+		},
+		{
+			"sc": "2.4.5",
+			"name": "Multiple Ways",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": null,
+				"host": true
+			}
+		},
+		{
+			"sc": "2.4.6",
+			"name": "Headings and Labels",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "headings and labels describe their content",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "2.4.7",
+			"name": "Focus Visible",
+			"atTarget": false,
+			"status": "found",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "default",
+					"status": "found"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-visible",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [
+				"probe focus-visible, in default: 1 finding"
+			],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"person": "indicator is clear",
+			"manual": null
+		},
+		{
+			"sc": "2.4.11",
+			"name": "Focus Not Obscured (Minimum)",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "focus-obscured",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "focus-obscured, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; focus-obscured, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.5.1",
+			"name": "Pointer Gestures",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "pointer-gestures",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "pointer-gestures was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "such a gesture",
+				"host": false
+			}
+		},
+		{
+			"sc": "2.5.2",
+			"name": "Pointer Cancellation",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "pointer-cancellation",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "pointer-cancellation was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "2.5.3",
+			"name": "Label in Name",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "visible label against name",
+			"manual": {
+				"at": true,
+				"with": "voice control",
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "2.5.4",
+			"name": "Motion Actuation",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "motion-actuation",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "motion-actuation was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "motion input",
+				"host": false
+			}
+		},
+		{
+			"sc": "2.5.7",
+			"name": "Dragging Movements",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "dragging",
+					"where": "the source",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "dragging was not run in this measure (at light, at build depth)",
+			"person": "a single-pointer alternative",
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "dragging",
+				"host": false
+			}
+		},
+		{
+			"sc": "2.5.8",
+			"name": "Target Size (Minimum)",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "target-size",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "target-size was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "3.1.1",
+			"name": "Language of Page",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "3.1.2",
+			"name": "Language of Parts",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "foreign-language text left unmarked",
+			"manual": null
+		},
+		{
+			"sc": "3.2.1",
+			"name": "On Focus",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "on-focus",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "on-focus, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; on-focus, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "3.2.2",
+			"name": "On Input",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "on-input",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "on-input was not run in this measure (at light, at build depth)",
+			"person": null,
+			"manual": null
+		},
+		{
+			"sc": "3.2.3",
+			"name": "Consistent Navigation",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": null,
+				"host": true
+			}
+		},
+		{
+			"sc": "3.2.4",
+			"name": "Consistent Identification",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "same function, same name, across states",
+			"manual": null
+		},
+		{
+			"sc": "3.2.6",
+			"name": "Consistent Help",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": null,
+				"host": true
+			}
+		},
+		{
+			"sc": "3.3.1",
+			"name": "Error Identification",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "error-identification",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "error-identification was not run in this measure (at light, at build depth)",
+			"person": "the message is clear",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "3.3.2",
+			"name": "Labels or Instructions",
+			"atTarget": true,
+			"status": "measured",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json"
+			],
+			"person": "labels and instructions are enough",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "3.3.3",
+			"name": "Error Suggestion",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "error says how to fix it",
+			"manual": null
+		},
+		{
+			"sc": "3.3.4",
+			"name": "Error Prevention (Legal, Financial, Data)",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "flow can be reversed, checked or confirmed",
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "legal, financial or data-changing flow",
+				"host": false
+			}
+		},
+		{
+			"sc": "3.3.7",
+			"name": "Redundant Entry",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": "steps that ask for the same thing twice",
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": "a multi-step flow",
+				"host": false
+			}
+		},
+		{
+			"sc": "3.3.8",
+			"name": "Accessible Authentication (Minimum)",
+			"atTarget": false,
+			"status": "person",
+			"by": [],
+			"found": [],
+			"evidence": [],
+			"person": null,
+			"manual": {
+				"at": false,
+				"with": null,
+				"when": null,
+				"host": true
+			}
+		},
+		{
+			"sc": "4.1.2",
+			"name": "Name, Role, Value",
+			"atTarget": true,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "axe",
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "default",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "confirm",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "loading",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "success",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "large",
+					"status": "notRun"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "empty",
+					"status": "measured"
+				},
+				{
+					"layer": "probe",
+					"what": "name-role-value",
+					"where": "error",
+					"status": "measured"
+				}
+			],
+			"found": [],
+			"evidence": [
+				"projects/integration-credentials/accessibility/v1.json",
+				"projects/integration-credentials/accessibility/v1/default/cells.json",
+				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
+				"projects/integration-credentials/accessibility/v1/loading/cells.json",
+				"projects/integration-credentials/accessibility/v1/empty/cells.json",
+				"projects/integration-credentials/accessibility/v1/error/cells.json"
+			],
+			"why": "name-role-value, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; name-role-value, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
+			"person": "names make sense; state is exposed; what axe flagged to review (aria-valid-attr-value, aria-hidden-focus)",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		},
+		{
+			"sc": "4.1.3",
+			"name": "Status Messages",
+			"atTarget": false,
+			"status": "notRun",
+			"by": [
+				{
+					"layer": "probe",
+					"what": "status-messages",
+					"where": "every page",
+					"status": "notRun"
+				}
+			],
+			"found": [],
+			"evidence": [],
+			"why": "status-messages was not run in this measure (at light, at build depth)",
+			"person": "message is worth announcing",
+			"manual": {
+				"at": true,
+				"with": null,
+				"when": null,
+				"host": false
+			}
+		}
+	]
+}

@@ -135,7 +135,7 @@ export type PrototypeReadiness =
 
 /** Reviewers never clone anything, so a project is assembled from the design repository's contents, not a checkout. */
 export interface Project {
-	/** Its directory's name under `projects/`. */
+	/** Its directory's name under `prototypes/`. */
 	id: string;
 	/** First heading of `brief.md`, or the id. */
 	title: string;

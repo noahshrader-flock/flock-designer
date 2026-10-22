@@ -20,7 +20,7 @@ write code. **Read-only.** Never edit. Your output is a report.
   `.dsnr/workspace.json` declares one. Check every hit against the avoid list.
 - **Direct network:** `grep -rnE "\bfetch\(|axios\." <the work's files>`: any hit outside the product's mock layer is a
   finding.
-- **No file touched outside the change boundary declared in `projects/<project-id>/brief.md`.** Stricter than any
+- **No file touched outside the change boundary declared in `prototypes/<project-id>/brief.md`.** Stricter than any
   directory: an unrelated "helpful" fix is still a violation. If the brief declares no boundary, that is a finding.
 - No new dependency added, and no production route registered, on the prototype path.
 

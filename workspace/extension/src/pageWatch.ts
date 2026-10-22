@@ -16,7 +16,7 @@ const hashOf = (file: string): string | null => {
 };
 
 /**
- * Tells `onPage` a version's page in `dir` (a project's `prototypes` folder) has changed, whoever changed it: the app, the
+ * Tells `onPage` a version's page in `dir` (a prototype's folder) has changed, whoever changed it: the app, the
  * `dsnr` command run by an agent in another process, or a pull. The operating system says so, so nothing is polled; a change
  * is acted on once its writes have stopped, and only if the page is not what it was. Nothing to watch is nothing to say.
  */

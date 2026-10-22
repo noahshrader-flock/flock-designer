@@ -6,7 +6,7 @@ These live here.
 how it works and why, every contract, and the change log. If you are picking this up, start with its "Where things
 stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is left to do; each fact is in only one of the two.
 
-**`projects/`** — one folder per project. Drop in whatever context you have.
+**`prototypes/`** — one folder per project. Drop in whatever context you have.
 
 **`agents/`** — how to build UI in a Flock product, for any agent (`ui-guide.md`); the builder (`dsnr.md`, DSNR's
 workflow on top of that) and its two read-only reviewers, the same in every product. A product carries only a short
@@ -39,10 +39,10 @@ The app is for **discovery**: a prototype is reviewed in it, by anyone with the 
 
 ## Starting a project
 
-Make a folder under `projects/`. Put whatever you already have into it — a markdown file, a PRD, a
+Make a folder under `prototypes/`. Put whatever you already have into it — a markdown file, a PRD, a
 few screenshots, some links, a paragraph. There is no required format and no minimum.
 
-`projects/_template.md` exists in case a blank page is annoying. Ignore it otherwise. Three
+`prototypes/_template.md` exists in case a blank page is annoying. Ignore it otherwise. Three
 sentences is a legitimate way to start a project, and "here's the Figma, make it work on mobile" is
 a legitimate way to start a project.
 
@@ -50,9 +50,9 @@ Everything the agent writes for that project lands in the same folder — the br
 context, what it read before building, the review, and the decisions you confirmed. One project, one
 place, so picking up someone else's work means reading one folder.
 
-A **prototype** is kept in its project's folder too, under `prototypes/`: one React file and the page
+Each **version** is kept in that folder too, as `v1.tsx` and `v1.html`: one React file and the page
 built from it, so anyone can open it without the product. Large files those pages share are kept once in
-`projects/_shared/`, which is not a project.
+`prototypes/_shared/`, which is not a project.
 
 ## What a product repository provides
 

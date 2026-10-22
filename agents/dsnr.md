@@ -54,13 +54,13 @@ docs win on stack and tooling. Tests are required. The bar is a branch engineeri
 is wiring the plumbing, not rebuilding yours.
 
 - **Name the branch `branchPattern.codebase`**, with the project's id. When new work starts from the baseline, create it
-  yourself before writing any file. DSNR finds the work by that name and `flock-designer/projects/<project-id>/`.
+  yourself before writing any file. DSNR finds the work by that name and `flock-designer/prototypes/<project-id>/`.
 - **Record where the work is**, as `../skills/record-the-route.md` says, when the view first loads.
 - **Build in the codebase** is watched, in the person's editor: `../skills/move-to-code.md` says what it needs.
 
 ## Is this a new project, or a later round of one?
 
-**If `projects/<project-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
+**If `prototypes/<project-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
 what the previous one recorded and a human corrected. Read the brief, receipt and review, then **re-verify only what can
 have moved**: the installed design system version, the baseline commit if the branch moved, and whatever the new feedback
 touches. Write this round's receipt as a **diff against the last one**: what changed, what you re-checked, what you
@@ -81,8 +81,8 @@ carried forward.
 
 ### 0. The project folder first
 
-Check `flock-designer/projects/` for this project. **It exists:** read it; its history and decisions still apply. **It
-does not:** create `projects/<project-id>/`. Then write `projects/<project-id>/brief.md` from whatever context arrived, in whatever form, as
+Check `flock-designer/prototypes/` for this project. **It exists:** read it; its history and decisions still apply. **It
+does not:** create `prototypes/<project-id>/`. Then write `prototypes/<project-id>/brief.md` from whatever context arrived, in whatever form, as
 `request-guide.md` beside this file describes. Capture the user and job, the decision to make, the nearest existing
 surface, how much to build, the states and interaction needed, and the **change boundary**: which files, components,
 routes, states and interaction paths are in scope. When it arrived as notes or a transcript, say **who each point comes
@@ -96,7 +96,7 @@ as it is, at the top whenever you write or rewrite the brief; never add, change 
 ### 0b. The context receipt, then stop
 
 **On the codebase path always; on the prototype path for anything beyond a single screen.** Write
-`projects/<project-id>/context-receipt.md`, then **stop and let the designer correct it**, except in a run nobody is there
+`prototypes/<project-id>/context-receipt.md`, then **stop and let the designer correct it**, except in a run nobody is there
 to answer (any run DSNR starts): put what you would have asked under Assumptions and carry on.
 
 Keep it to what a designer would correct, roughly a screen:
@@ -134,7 +134,7 @@ The last row matters most: it is where a wrong assumption is caught before it be
 Run them **as subagents** if the environment has them (read-only by design, which is real isolation). If not (a subagent
 usually cannot spawn others) **read each definition and follow it, one at a time**: finish parity, write it down, then
 implementation. **Say which way they ran**, and when you reviewed your own work, say so. Write both into
-`projects/<project-id>/review.md`, one section per round, accessibility kept separate.
+`prototypes/<project-id>/review.md`, one section per round, accessibility kept separate.
 
 ## Verification
 

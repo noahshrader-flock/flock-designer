@@ -195,7 +195,7 @@ export class Reviews {
 	private watchPages(tab: Tab, projectId: string, records: string): void {
 		if (!this.deps.watch || tab.watching?.records === records) return;
 		tab.watching?.close();
-		const watching = this.deps.watch(join(records, projectId, 'prototypes'), (name) => void this.pageSaved(projectId, records, name));
+		const watching = this.deps.watch(join(records, projectId), (name) => void this.pageSaved(projectId, records, name));
 		tab.watching = { records, close: watching.close };
 	}
 

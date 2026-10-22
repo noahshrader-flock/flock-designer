@@ -36,7 +36,9 @@ describe('callApi', () => {
 
 	it('names the missing permission and where to set it, which GitHub does not', async () => {
 		const { fetcher } = stub([{ status: 403, body: { message: 'Resource not accessible by integration' } }]);
-		await expect(callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher)).rejects.toThrow(/Contents \(read-only\).*Permissions & events/s);
+		await expect(callApi('tok', { path: '/repos/a/b/contents/prototypes' }, fetcher)).rejects.toThrow(
+			/Contents \(read-only\).*Permissions & events/s,
+		);
 	});
 
 	it('names the Issues permission when that is the one missing', async () => {
@@ -98,9 +100,9 @@ describe('a read asked again (conditional requests)', () => {
 			{ body: { name: 'first' }, headers: { ETag: '"abc"' } },
 			{ status: 304, headers: { ETag: '"abc"' } },
 		]);
-		expect(await callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher, cache)).toEqual({ name: 'first' });
+		expect(await callApi('tok', { path: '/repos/a/b/contents/prototypes' }, fetcher, cache)).toEqual({ name: 'first' });
 		expect(calls[0]?.init?.headers?.['If-None-Match']).toBeUndefined();
-		expect(await callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher, cache)).toEqual({ name: 'first' });
+		expect(await callApi('tok', { path: '/repos/a/b/contents/prototypes' }, fetcher, cache)).toEqual({ name: 'first' });
 		expect(calls[1]?.init?.headers?.['If-None-Match']).toBe('"abc"');
 	});
 

@@ -43,7 +43,7 @@ kinds, switched at the top, both starting from a repository and a branch in it:
   they are, and will not start without them. The agent writes one React file, the app bundles it against
   the product's installed packages into one page, and both are kept in the project's folder
   (`prototypes/v1.tsx`, `prototypes/v1.html`, named by the version). Large files the pages embed (the design system's fonts) are kept once,
-  in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modeled on.
+  in `prototypes/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modeled on.
 - **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
@@ -65,7 +65,7 @@ that pushes, switches branch or deletes.
 | Let a prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
-| Push the person's own work branches (`feature/<project>`, once it has a commit of its own: one after where the work was made, `madeFrom`, not one of the branch it was made from) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, a branch with nothing of its own yet, or push other unpublished work along with the records |
+| Push the person's own work branches (`feature/<project>`, once it has a commit of its own: one after where the work was made, `madeFrom`, not one of the branch it was made from) and commit and push the design repository's `prototypes/` folder, by itself | Push anything else, force-push, publish a teammate's branch, a branch with nothing of its own yet, or push other unpublished work along with the records |
 | Push a project's `feature/` branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
@@ -134,7 +134,7 @@ pull request, and the app never sees the designer's token. Only committed work i
 
 ## Where things live
 
-Project records go to **`flock-designer/projects/<project-id>/`**, not into the product checkout.
+Project records go to **`flock-designer/prototypes/<project-id>/`**, not into the product checkout.
 The plan settled this and gave the reason: a record on the prototype branch means picking up
 someone's work requires knowing which branch to check out, and it needs a standing rule to keep
 per-project state off `develop`. It also dirties the working tree, which then blocks the next
@@ -487,7 +487,7 @@ Claude Code, so do it on a test project you can delete:
 6. The review's title bar: **Open the published page** (once it is published) and **Copy the published page's link**.
    The status bar says whether your work is synced.
 7. In the panel: the project's **⋯** menu (or right-click it) › **Assign folder…**, and check it moves under its folder.
-8. When you are done: DSNR has no Delete, so remove the project's folder (`projects/dsnr-test`) from the design
+8. When you are done: DSNR has no Delete, so remove the project's folder (`prototypes/dsnr-test`) from the design
    repository and push, and close its review issue on GitHub.
 
 **By hand, on purpose (Phase 5): into the code, and Handoff.** It makes a branch in the product, runs Claude Code

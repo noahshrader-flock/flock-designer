@@ -36,6 +36,6 @@ describe('what the site is built from', () => {
 		expect(isSiteSource('workspace/src/page/pins.ts')).toBe(true);
 		expect(isSiteSource('workspace/pageCode.vite.ts')).toBe(true);
 		expect(isSiteSource('workspace/src/core/services/agent/agent.ts')).toBe(false);
-		expect(isSiteSource('projects/demo/brief.md')).toBe(false);
+		expect(isSiteSource('prototypes/demo/brief.md')).toBe(false);
 	});
 });

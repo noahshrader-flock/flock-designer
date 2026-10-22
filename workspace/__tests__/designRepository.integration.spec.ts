@@ -33,7 +33,7 @@ const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
 	mkdirSync(join(dir, 'agents'), { recursive: true });
 	writeFileSync(join(dir, 'agents', 'ui-guide.md'), '# Building UI\n');
-	mkdirSync(join(dir, 'projects'), { recursive: true });
+	mkdirSync(join(dir, 'prototypes'), { recursive: true });
 	return dir;
 };
 
@@ -47,7 +47,7 @@ describe('the design repository a product belongs to', () => {
 		productNaming();
 		expect(designRepositoryOf(product)).toEqual(DESIGN_REPO);
 		designRepository(join(base, 'GitHub', DESIGN_REPO.repo));
-		expect(recordsRootFor(product)).toBe(join(base, 'GitHub', DESIGN_REPO.repo, 'projects'));
+		expect(recordsRootFor(product)).toBe(join(base, 'GitHub', DESIGN_REPO.repo, 'prototypes'));
 	});
 
 	it('is the one its workspace file names, found beside it by that repository’s name, never Flock’s', () => {
@@ -56,7 +56,7 @@ describe('the design repository a product belongs to', () => {
 		designRepository(join(base, 'GitHub', DESIGN_REPO.repo));
 		expect(recordsRootFor(product)).toBeNull();
 		designRepository(join(base, 'GitHub', 'cheq-designer'));
-		expect(recordsRootFor(product)).toBe(join(base, 'GitHub', 'cheq-designer', 'projects'));
+		expect(recordsRootFor(product)).toBe(join(base, 'GitHub', 'cheq-designer', 'prototypes'));
 	});
 
 	it('is the clone the person picked for it, kept on this machine, before one beside the product', () => {
@@ -67,10 +67,10 @@ describe('the design repository a product belongs to', () => {
 		clones.set('cheq/cheq-designer', picked);
 		// Kept: read again from the file, as the next window would.
 		expect(new DesignRepositoryClones(join(base, 'design-repositories.json')).at('cheq/cheq-designer')).toBe(picked);
-		expect(recordsRootFor(product, { clones })).toBe(join(picked, 'projects'));
+		expect(recordsRootFor(product, { clones })).toBe(join(picked, 'prototypes'));
 		// Gone: the one beside the product, not nothing.
 		rmSync(picked, { recursive: true, force: true });
-		expect(recordsRootFor(product, { clones })).toBe(join(base, 'GitHub', 'cheq-designer', 'projects'));
+		expect(recordsRootFor(product, { clones })).toBe(join(base, 'GitHub', 'cheq-designer', 'prototypes'));
 	});
 
 	it('says which repository is missing, and the two ways to give it, when neither is there', async () => {
@@ -97,9 +97,9 @@ describe('the design repository a product belongs to', () => {
 
 	it('takes a picked folder only when it is a git repository with the agent guide, never a product with a projects folder', () => {
 		expect(isDesignRepository(designRepository(join(base, 'a')))).toBe(true);
-		// An Angular workspace keeps its apps in projects/: a product, not a design repository.
+		// An Angular workspace keeps its apps in prototypes/: a product, not a design repository.
 		mkdirSync(join(base, 'b', '.git'), { recursive: true });
-		mkdirSync(join(base, 'b', 'projects'), { recursive: true });
+		mkdirSync(join(base, 'b', 'prototypes'), { recursive: true });
 		expect(isDesignRepository(join(base, 'b'))).toBe(false);
 		// The guide alone, not a git repository.
 		mkdirSync(join(base, 'c', 'agents'), { recursive: true });

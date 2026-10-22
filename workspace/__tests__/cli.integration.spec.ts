@@ -14,7 +14,7 @@ describe('new-prototype', () => {
 	it('starts v1 for a new project, with its brief, recorded only once it is saved, and prints the task', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras')).toBe(0);
 
-		expect(existsSync(join(world.design, 'projects', 'demo', 'work.json'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'work.json'))).toBe(false);
 		expect(world.out.join('\n')).toContain('Started demo v1: it is recorded when it is saved.');
 		expect(versions()).toMatchObject([
 			{
@@ -24,7 +24,7 @@ describe('new-prototype', () => {
 				contributors: [{ name: 'Test Person', login: 'test-person' }],
 			},
 		]);
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list of cameras\n');
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list of cameras\n');
 
 		const task = world.out.join('\n');
 		expect(task).toContain('# Build a prototype');
@@ -50,10 +50,10 @@ describe('new-prototype', () => {
 
 	it('makes the next version for a project that has one, keeping its brief', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		const brief = readFileSync(join(world.design, 'projects', 'demo', 'brief.md'), 'utf8');
+		const brief = readFileSync(join(world.design, 'prototypes', 'demo', 'brief.md'), 'utf8');
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea: a map')).toBe(0);
 		expect(versions().map((i) => i.name)).toEqual(['v1', 'v2']);
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
 	it('keeps the product it was made on as its repository, whatever the clone is called', async () => {
@@ -88,14 +88,14 @@ describe('new-prototype', () => {
 		rmSync(join(world.product, 'node_modules'), { recursive: true, force: true });
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(1);
 		expect(world.err.join('\n')).toMatch(/npm ci/);
-		expect(existsSync(join(world.design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo'))).toBe(false);
 	});
 
 	it('asks for a title for a new project, and for what to make', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'A list')).toBe(2);
 		expect(world.err.join('\n')).toMatch(/--title/);
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo')).toBe(2);
-		expect(existsSync(join(world.design, 'projects', 'demo'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo'))).toBe(false);
 	});
 });
 
@@ -108,7 +108,7 @@ describe('save-prototype', () => {
 		);
 
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
-		const saved = join(world.design, 'projects', 'demo', 'prototypes');
+		const saved = join(world.design, 'prototypes', 'demo');
 		expect(readFileSync(join(saved, 'v1.tsx'), 'utf8')).toContain("from 'x'");
 		expect(readFileSync(join(saved, 'v1.html'), 'utf8')).toContain('Real component');
 		expect(world.out.at(-1)).toMatch(/It is in DSNR/);
@@ -119,7 +119,7 @@ describe('save-prototype', () => {
 		writeFileSync(join(world.prototypes, 'demo', 'v1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
 		expect(world.err.join('\n')).toMatch(/did not build[\s\S]*not-installed/);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'prototypes'))).toBe(false);
+		for (const saved of ['v1.tsx', 'v1.html']) expect(existsSync(join(world.design, 'prototypes', 'demo', saved))).toBe(false);
 	});
 
 	it('refuses a name that is not a prototype', async () => {
@@ -186,7 +186,7 @@ describe('change-prototype', () => {
 		writeFileSync(local('v1'), page('bigger'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('bigger');
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toContain('bigger');
 	});
 
 	it('makes a new version from it only when asked, recorded only when saved, with what it started from', async () => {
@@ -205,8 +205,8 @@ describe('change-prototype', () => {
 		writeFileSync(local('v2'), page('cards'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(0);
 		expect(recorded()).toMatchObject([{ name: 'v1' }, { name: 'v2', from: 'v1', contributors: [{ name: 'Test Person', login: 'test-person' }] }]);
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v2.html'), 'utf8')).toContain('cards');
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('first');
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'v2.html'), 'utf8')).toContain('cards');
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toContain('first');
 	});
 
 	it('when the comments cannot be read, says so, and still changes it in place', async () => {
@@ -228,7 +228,7 @@ describe('change-prototype', () => {
 		expect(versions().map((i) => i.name)).toEqual(['v1', 'v2']);
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(1);
 		expect(world.err.join('\n')).toMatch(/demo v2 was made meanwhile, so this new version is not saved over it/);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'prototypes', 'v2.html'))).toBe(false);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'v2.html'))).toBe(false);
 	});
 
 	it('makes nothing when a new version was asked for and nothing was changed', async () => {
@@ -284,7 +284,7 @@ describe('build-site', () => {
 	it('builds the site from the design repository beside the product, into the app folder by default', async () => {
 		await saved();
 		expect(await run('build-site')).toBe(0);
-		expect(readFileSync(join(world.prototypes, '_site', 'demo', 'v1', 'page.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(world.prototypes, '_site', 'prototype', 'demo', 'v1', 'page.html'), 'utf8')).toContain('Real component');
 		expect(readFileSync(join(world.prototypes, '_site', 'index.html'), 'utf8')).toContain('Demo');
 		expect(world.out.join('\n')).toMatch(/^Built 1 page in 1 project at /);
 	});
@@ -299,7 +299,7 @@ describe('build-site', () => {
 		const repoIn = (cwd: string, out: string) =>
 			main(['build-site', '--out', out], { ...deps(cwd), buildViewer: async () => viewer }).then(() =>
 				/"owner":"(\w+)","repo":"([\w-]+)"/
-					.exec(readFileSync(join(out, 'demo', 'v1', 'index.html'), 'utf8'))
+					.exec(readFileSync(join(out, 'prototype', 'demo', 'v1', 'index.html'), 'utf8'))
 					?.slice(1)
 					.join('/'),
 			);
@@ -330,7 +330,7 @@ describe('build-site', () => {
 		await saved();
 		const site = join(world.home, 'elsewhere-site');
 		expect(await main(['build-site', '--out', site], deps(world.design))).toBe(0);
-		expect(readFileSync(join(site, 'index.html'), 'utf8')).toContain('href="demo/v1/"');
+		expect(readFileSync(join(site, 'index.html'), 'utf8')).toContain('href="prototype/demo/v1/"');
 	});
 });
 
@@ -406,7 +406,7 @@ describe('publish opens the page the first time', () => {
 		const branch = await saved();
 		const { code, opened } = await publishWith(branch, false);
 		expect(code).toBe(0);
-		expect(opened).toEqual(['https://acme.github.io/design/demo/v1/']);
+		expect(opened).toEqual(['https://acme.github.io/design/prototype/demo/v1/']);
 		expect(world.out.at(-1)).toBe(opened[0]);
 	});
 
@@ -458,7 +458,7 @@ describe('unpublish', () => {
 		await saved();
 		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1'], deps(world.design))).toBe(1);
 		expect(world.err.join('\n')).toMatch(/gh auth login/);
-		expect(existsSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'))).toBe(true);
+		expect(existsSync(join(world.design, 'prototypes', 'demo', 'v1.html'))).toBe(true);
 	});
 
 	it('removes the page and source, here and in the design repository, pushes, and keeps the record', async () => {
@@ -482,12 +482,12 @@ describe('unpublish', () => {
 		const quick = { ...deps(world.design), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }) };
 		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1'], quick)).toBe(0);
 		for (const f of ['v1.html', 'v1.tsx']) {
-			expect(existsSync(join(world.design, 'projects', 'demo', 'prototypes', f))).toBe(false);
+			expect(existsSync(join(world.design, 'prototypes', 'demo', f))).toBe(false);
 			expect(existsSync(join(world.prototypes, 'demo', f))).toBe(false);
 		}
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);
 		expect(g(remote, 'ls-tree', '-r', '--name-only', branch)).not.toContain('v1.html');
-		expect(world.out.join('\n')).toContain('https://acme.github.io/design/demo/v1/');
+		expect(world.out.join('\n')).toContain('https://acme.github.io/design/prototype/demo/v1/');
 	});
 });
 
@@ -545,7 +545,7 @@ describe('the command', () => {
 		expect(sh(build).status).toBe(0);
 		const saved = sh(save);
 		expect(saved.status).toBe(0);
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toContain('Real component');
 	});
 });
 
@@ -580,7 +580,7 @@ describe('agent-files', () => {
 
 describe('a saved source changed since this machine saved it', () => {
 	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
-	const saved = () => join(world.design, 'projects', 'demo', 'prototypes', 'v1.tsx');
+	const saved = () => join(world.design, 'prototypes', 'demo', 'v1.tsx');
 	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
 	const made = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
@@ -592,19 +592,19 @@ describe('a saved source changed since this machine saved it', () => {
 
 	it('is refused, not replaced: nothing is saved, and the message says what happened and how to go on', async () => {
 		await made();
-		const savedPage = readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8');
+		const savedPage = readFileSync(join(world.design, 'prototypes', 'demo', 'v1.html'), 'utf8');
 		const builtPage = readFileSync(join(world.prototypes, 'demo', 'v1.html'), 'utf8');
 		// What an agent that found the saved copy first does, or a collaborator whose save came in with a pull.
 		writeFileSync(saved(), page('theirs'));
 		writeFileSync(local('v1'), page('mine'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
 		const said = world.err.join('\n');
-		expect(said).toContain('projects/demo/prototypes/v1.tsx');
+		expect(said).toContain('prototypes/demo/v1.tsx');
 		expect(said).toContain('has been changed since this machine saved it');
 		expect(said).toContain(local('v1'));
 		expect(said).toContain('--replace');
 		expect(readFileSync(saved(), 'utf8')).toBe(page('theirs'));
-		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toBe(savedPage);
+		expect(readFileSync(join(world.design, 'prototypes', 'demo', 'v1.html'), 'utf8')).toBe(savedPage);
 		// Refused before it was built: nothing is spent on a page that is not to be saved.
 		expect(readFileSync(join(world.prototypes, 'demo', 'v1.html'), 'utf8')).toBe(builtPage);
 	});
@@ -696,7 +696,7 @@ describe('processing the comments on a prototype, as its entry skill says', () =
 });
 
 describe('what was asked, kept with the version it was asked for', () => {
-	const asked = (name: string) => join(world.design, 'projects', 'demo', `requests-${name}.md`);
+	const asked = (name: string) => join(world.design, 'prototypes', 'demo', `requests-${name}.md`);
 	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
 	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
 
@@ -728,7 +728,7 @@ describe('what was asked, kept with the version it was asked for', () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', said);
 		writeFileSync(local('v1'), page('first'));
 		await run('save-prototype', '--project', 'demo', '--name', 'v1');
-		const kept = [asked('v1'), join(world.design, 'projects', 'demo', 'brief.md'), join(world.design, 'projects', 'demo', 'work.json')].map((f) =>
+		const kept = [asked('v1'), join(world.design, 'prototypes', 'demo', 'brief.md'), join(world.design, 'prototypes', 'demo', 'work.json')].map((f) =>
 			readFileSync(f, 'utf8'),
 		);
 		for (const text of kept) expect(text).not.toMatch(/jo@flocksafety|404-555-0123|ghp_/);

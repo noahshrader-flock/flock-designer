@@ -1,6 +1,6 @@
 import type { Work, Person, Project } from '../shared/contract';
 import { fromBrief } from '../shared/brief';
-import { projectDir, projectPath, WORK_FILE, workPath } from '../shared/designPaths';
+import { PROTOTYPES_DIR, projectDir, projectPath, WORK_FILE, workPath } from '../shared/designPaths';
 import { isBot, mergePeople } from '../shared/people';
 import { workOrder, latestDate } from '../shared/projectList';
 import { asRecord } from '../shared/json';
@@ -37,7 +37,7 @@ export class DesignRepo {
 	}
 
 	async listProjects(): Promise<Project[]> {
-		const dirs = (await this.files.list('projects')).filter((e) => e.type === 'dir' && !e.name.startsWith('_'));
+		const dirs = (await this.files.list(PROTOTYPES_DIR)).filter((e) => e.type === 'dir' && !e.name.startsWith('_'));
 		const issues = await this.threads.byBranch({ counting: true });
 
 		return Promise.all(

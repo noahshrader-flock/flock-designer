@@ -130,7 +130,7 @@ describe('the pull request text', () => {
 		expect(title).toMatch(/not for merge/);
 		expect(body).toMatch(/draft pull request/);
 		expect(body).toMatch(/should not be merged/);
-		expect(body).toContain('projects/demo');
+		expect(body).toContain('prototypes/demo');
 	});
 });
 

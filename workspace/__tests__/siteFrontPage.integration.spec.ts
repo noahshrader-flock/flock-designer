@@ -12,11 +12,11 @@ let front: string;
 beforeAll(() => {
 	root = mkdtempSync(join(tmpdir(), 'dsnr-front-'));
 	const design = join(root, 'design');
-	const dir = join(design, 'projects', 'alpha');
-	mkdirSync(join(dir, 'prototypes'), { recursive: true });
+	const dir = join(design, 'prototypes', 'alpha');
+	mkdirSync(dir, { recursive: true });
 	writeFileSync(join(dir, 'brief.md'), '# Alerts\n');
 	writeFileSync(join(dir, 'work.json'), JSON.stringify([{ projectId: 'alpha', name: 'v1', branch: 'prototype/alpha/v1', commit: null, note: '' }]));
-	writeFileSync(join(dir, 'prototypes', 'v1.html'), '<!doctype html><html><body><h1>Alpha</h1></body></html>');
+	writeFileSync(join(dir, 'v1.html'), '<!doctype html><html><body><h1>Alpha</h1></body></html>');
 	buildSite({ designRoot: design, outDir: join(root, 'site') });
 	front = `file://${join(root, 'site', 'index.html')}`;
 });

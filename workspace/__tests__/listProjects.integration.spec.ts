@@ -57,8 +57,8 @@ describe('the project list', () => {
 		const design = join(dir, 'flock-designer');
 		const prototypes = join(dir, 'prototypes');
 		mkdirSync(join(design, '.git'), { recursive: true });
-		mkdirSync(join(design, 'projects', 'widgets'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'widgets', 'brief.md'), '# Widget explorer\n');
+		mkdirSync(join(design, 'prototypes', 'widgets'), { recursive: true });
+		writeFileSync(join(design, 'prototypes', 'widgets', 'brief.md'), '# Widget explorer\n');
 		const record = {
 			projectId: 'widgets',
 			name: 'v1',
@@ -73,7 +73,7 @@ describe('the project list', () => {
 		const [started] = await list();
 		expect(started).toMatchObject({ id: 'widgets', title: 'Widget explorer', localOnly: true });
 		expect(started!.work.map((i) => [i.name, i.building])).toEqual([['v1', true]]);
-		writeFileSync(join(design, 'projects', 'widgets', 'work.json'), JSON.stringify([record]));
+		writeFileSync(join(design, 'prototypes', 'widgets', 'work.json'), JSON.stringify([record]));
 		const [recorded] = await list();
 		expect(recorded!.work.map((i) => [i.name, i.building])).toEqual([['v1', undefined]]);
 	});
@@ -81,8 +81,8 @@ describe('the project list', () => {
 	it('says codebase work has not begun until its branch has a commit of its own, not one of the branch it was made from', async () => {
 		const design = join(dir, 'flock-designer');
 		mkdirSync(join(design, '.git'), { recursive: true });
-		mkdirSync(join(design, 'projects', 'alerts'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'alerts', 'brief.md'), '# Alerts\n');
+		mkdirSync(join(design, 'prototypes', 'alerts'), { recursive: true });
+		writeFileSync(join(design, 'prototypes', 'alerts', 'brief.md'), '# Alerts\n');
 		g(product, 'checkout', '-q', '-b', 'feature/test-base');
 		writeFileSync(join(product, 'base.txt'), 'x\n');
 		g(product, 'add', '.');
@@ -98,7 +98,7 @@ describe('the project list', () => {
 			note: 'n',
 			madeFrom,
 		};
-		writeFileSync(join(design, 'projects', 'alerts', 'work.json'), JSON.stringify([record]));
+		writeFileSync(join(design, 'prototypes', 'alerts', 'work.json'), JSON.stringify([record]));
 		const begun = async () =>
 			(
 				await listProjects({
@@ -121,10 +121,10 @@ describe('the project list', () => {
 	it("still shows this machine's work when GitHub cannot be reached", async () => {
 		const design = join(dir, 'flock-designer');
 		mkdirSync(join(design, '.git'), { recursive: true });
-		mkdirSync(join(design, 'projects', 'demo'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
+		mkdirSync(join(design, 'prototypes', 'demo'), { recursive: true });
+		writeFileSync(join(design, 'prototypes', 'demo', 'brief.md'), '# Demo\n');
 		const record = { projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
-		writeFileSync(join(design, 'projects', 'demo', 'work.json'), JSON.stringify([record]));
+		writeFileSync(join(design, 'prototypes', 'demo', 'work.json'), JSON.stringify([record]));
 		const listed = await listProjects({
 			root: product,
 			login: null,

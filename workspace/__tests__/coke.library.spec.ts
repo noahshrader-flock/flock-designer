@@ -24,7 +24,7 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 	});
 
 	it("puts project records where the repository's own handoff gate looks for them", () => {
-		// check-handoff.mjs resolves '../flock-designer/projects/<id>'. If these two
+		// check-handoff.mjs resolves '../flock-designer/prototypes/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
 		expect(recordsRootFor(COKE)).toBe(join(dirname(COKE), 'flock-designer', 'projects'));
 	});

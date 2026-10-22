@@ -67,9 +67,9 @@ repo(join(world, 'flock-designer'), {
 	'agents/ui-guide.md': '# Building UI in a Flock product\n',
 	'skills/record-the-route.md': '# Record where the work is\n',
 	'standards/universal/accessibility.md': '# Accessibility\n',
-	'projects/fixture/brief.md': '# Fixture\n',
-	'projects/fixture/work.json': `${JSON.stringify([record], null, 2)}\n`,
-	'projects/fixture/prototypes/v1.html':
+	'prototypes/fixture/brief.md': '# Fixture\n',
+	'prototypes/fixture/work.json': `${JSON.stringify([record], null, 2)}\n`,
+	'prototypes/fixture/v1.html':
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 

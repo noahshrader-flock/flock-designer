@@ -1,0 +1,50 @@
+[
+ {
+  "cell": "structure",
+  "sc": "1.3.1",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "keyboard-reach",
+  "sc": "2.1.1",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "keyboard-trap",
+  "sc": "2.1.2",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "focus-order",
+  "sc": "2.4.3",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "focus-visible",
+  "sc": "2.4.7",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "focus-obscured",
+  "sc": "2.4.11",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "on-focus",
+  "sc": "3.2.1",
+  "status": "none",
+  "findings": []
+ },
+ {
+  "cell": "name-role-value",
+  "sc": "4.1.2",
+  "status": "none",
+  "findings": []
+ }
+]

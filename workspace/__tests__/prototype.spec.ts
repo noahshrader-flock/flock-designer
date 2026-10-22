@@ -17,22 +17,22 @@ describe('what a prototype is called', () => {
 		expect(isPrototypeKey('feature/users')).toBe(false);
 		expect(nextVersionName(['codebase'])).toBe('v1');
 		expect(nextVersionName(['v1', 'codebase'])).toBe('v2');
-		expect(prototypePagePath('users', 'v1')).toBe('projects/users/prototypes/v1.html');
+		expect(prototypePagePath('users', 'v1')).toBe('prototypes/users/v1.html');
 	});
 });
 
 describe('starting a prototype, and recording it once its first page is saved', () => {
 	const me = { name: 'Noah', login: 'noah' };
 	const now = new Date('2026-10-06T12:00:00Z');
-	const page = (files: Record<string, string | Buffer>) => async () => void (files['projects/users/prototypes/v1.html'] = '<p>');
+	const page = (files: Record<string, string | Buffer>) => async () => void (files['prototypes/users/v1.html'] = '<p>');
 
 	it('starts a new project with its brief and says what its record will be, writing no record', async () => {
 		const { store, files, writes } = memoryStore();
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
 		expect(started).toMatchObject({ name: 'v1', branch: 'prototype/users/v1', contributors: [me], createdAt: now.toISOString() });
 		expect(started.note).toBe('flag inactive users');
-		expect(files['projects/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
-		expect(writes).toEqual(['projects/users/brief.md']);
+		expect(files['prototypes/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
+		expect(writes).toEqual(['prototypes/users/brief.md']);
 	});
 
 	it('keeps no secret, email address or phone number in the brief or the version’s note', async () => {
@@ -40,7 +40,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		const said = 'Show jo@flocksafety.com, call 404-555-0123.\nUse ghp_abcdefghijklmnopqrstuvwxyz0123456789.';
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: said, me, now });
 		expect(started.note).toBe('Show [removed: an email address], call [removed: a phone number].');
-		expect(files['projects/users/brief.md']).toBe(
+		expect(files['prototypes/users/brief.md']).toBe(
 			'# Users\n\nShow [removed: an email address], call [removed: a phone number].\nUse [removed: a GitHub token].\n',
 		);
 	});
@@ -49,9 +49,9 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		const { store, files, writes } = memoryStore();
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
 		await recordStarted(store, started, page(files));
-		expect(JSON.parse(files['projects/users/work.json'] as string)).toEqual([started]);
-		expect(writes).toEqual(['projects/users/brief.md', 'projects/users/work.json']);
-		expect(Object.keys(files).indexOf('projects/users/prototypes/v1.html')).toBeLessThan(Object.keys(files).indexOf('projects/users/work.json'));
+		expect(JSON.parse(files['prototypes/users/work.json'] as string)).toEqual([started]);
+		expect(writes).toEqual(['prototypes/users/brief.md', 'prototypes/users/work.json']);
+		expect(Object.keys(files).indexOf('prototypes/users/v1.html')).toBeLessThan(Object.keys(files).indexOf('prototypes/users/work.json'));
 	});
 
 	it('records it once, when it was recorded already and stopped before its start was cleared', async () => {
@@ -59,13 +59,13 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
 		await recordStarted(store, started, page(files));
 		await recordStarted(store, started, page(files));
-		expect(JSON.parse(files['projects/users/work.json'] as string)).toHaveLength(1);
+		expect(JSON.parse(files['prototypes/users/work.json'] as string)).toHaveLength(1);
 	});
 
 	it('never saves over another of its name made meanwhile, and saves no page then', async () => {
 		const { store, files } = memoryStore();
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
-		files['projects/users/work.json'] = JSON.stringify([{ ...started, createdAt: '2026-10-06T13:00:00.000Z' }]);
+		files['prototypes/users/work.json'] = JSON.stringify([{ ...started, createdAt: '2026-10-06T13:00:00.000Z' }]);
 		const save = vi.fn(page(files));
 		await expect(recordStarted(store, started, save)).rejects.toThrow(
 			'users v1 was made meanwhile, so this one is not saved over it: start it again.',
@@ -75,8 +75,8 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it("adds to an existing project's versions, counting those started and not saved, and leaves its brief alone", async () => {
 		const { store, files } = memoryStore({
-			'projects/users/brief.md': '# Users\n\nThe real brief.\n',
-			'projects/users/work.json': JSON.stringify([
+			'prototypes/users/brief.md': '# Users\n\nThe real brief.\n',
+			'prototypes/users/work.json': JSON.stringify([
 				{ name: 'v1', branch: 'prototype/users/v1' },
 				{ name: 'v2', branch: 'prototype/users/v2' },
 			]),
@@ -85,13 +85,13 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		// Another prototype on a project is another idea: the next version.
 		expect(started.name).toBe('v4');
 		expect(started.contributors).toBeUndefined();
-		expect(files['projects/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
+		expect(files['prototypes/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
 	});
 
 	it('keeps the whole request in the brief, and its first line on the record', async () => {
 		const { store, files } = memoryStore();
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
-		expect(files['projects/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
+		expect(files['prototypes/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
 		expect(started.note).toBe('Add a Usage tab.');
 	});
 
@@ -103,7 +103,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it('refuses records it cannot read, or that are not a list, and writes nothing', async () => {
 		for (const bad of ['{not json', '{"name":"v1"}']) {
-			const { store, writes } = memoryStore({ 'projects/users/work.json': bad });
+			const { store, writes } = memoryStore({ 'prototypes/users/work.json': bad });
 			await expect(startPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list/);
 			expect(writes).toEqual([]);
 		}
@@ -111,7 +111,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 });
 
 describe('setCover', () => {
-	const RECORDS = 'projects/users/work.json';
+	const RECORDS = 'prototypes/users/work.json';
 	const rec = (name: string, more: Record<string, unknown> = {}) => ({
 		projectId: 'users',
 		name,
@@ -145,10 +145,10 @@ describe('cloneStore', () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const published = vi.fn();
 		const store = cloneStore(dir, published);
-		await store.write('projects/users/prototypes/v1.html', '<p>hi</p>', 'm');
-		expect(readFileSync(join(dir, 'projects/users/prototypes/v1.html'), 'utf8')).toBe('<p>hi</p>');
-		expect(await store.read('projects/users/prototypes/v1.html')).toBe('<p>hi</p>');
-		expect(await store.read('projects/users/nothing.md')).toBeNull();
+		await store.write('prototypes/users/v1.html', '<p>hi</p>', 'm');
+		expect(readFileSync(join(dir, 'prototypes/users/v1.html'), 'utf8')).toBe('<p>hi</p>');
+		expect(await store.read('prototypes/users/v1.html')).toBe('<p>hi</p>');
+		expect(await store.read('prototypes/users/nothing.md')).toBeNull();
 		expect(published).toHaveBeenCalledOnce();
 	});
 
@@ -156,21 +156,21 @@ describe('cloneStore', () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const store = cloneStore(dir, vi.fn());
 		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x80, 0xfe]);
-		await store.write('projects/users/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
-		expect(readFileSync(join(dir, 'projects/users/covers/v1-aaaaaaaaaaaa.jpg'))).toEqual(jpeg);
-		expect(await store.readBytes('projects/users/covers/v1-aaaaaaaaaaaa.jpg')).toEqual(jpeg);
-		expect(await store.readBytes('projects/users/covers/none.jpg')).toBeNull();
+		await store.write('prototypes/users/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+		expect(readFileSync(join(dir, 'prototypes/users/covers/v1-aaaaaaaaaaaa.jpg'))).toEqual(jpeg);
+		expect(await store.readBytes('prototypes/users/covers/v1-aaaaaaaaaaaa.jpg')).toEqual(jpeg);
+		expect(await store.readBytes('prototypes/users/covers/none.jpg')).toBeNull();
 	});
 
 	it('removes a folder and all in it from the clone, leaving the rest, then has the change published', async () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const published = vi.fn();
 		const store = cloneStore(dir, published);
-		await store.write('projects/users/prototypes/v1.html', '<p>', 'm');
-		await store.write('projects/users-2/brief.md', '# Users 2', 'm');
-		await store.remove('projects/users', 'm');
-		expect(existsSync(join(dir, 'projects/users'))).toBe(false);
-		expect(existsSync(join(dir, 'projects/users-2/brief.md'))).toBe(true);
+		await store.write('prototypes/users/v1.html', '<p>', 'm');
+		await store.write('prototypes/users-2/brief.md', '# Users 2', 'm');
+		await store.remove('prototypes/users', 'm');
+		expect(existsSync(join(dir, 'prototypes/users'))).toBe(false);
+		expect(existsSync(join(dir, 'prototypes/users-2/brief.md'))).toBe(true);
 		expect(published).toHaveBeenCalledTimes(3);
 	});
 

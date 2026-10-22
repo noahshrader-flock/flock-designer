@@ -7,11 +7,11 @@ you.
 ## Prototypes: saved for you, in the design repository
 
 You never commit a prototype. When a version is built, DSNR saves its source and its page into the design repository's
-`projects/` folder, and keeps the project's record (`work.json`) up to date. Then it commits and pushes those files to
+`prototypes/` folder, and keeps the project's record (`work.json`) up to date. Then it commits and pushes those files to
 GitHub with your own git sign-in, in the background, whenever they change: after a build, after a comment is addressed,
 when the project list is read, and when VS Code comes back into focus.
 
-It commits only the `projects/` folder, on top of the latest from GitHub, and it never rebases, stashes or changes your
+It commits only the `prototypes/` folder, on top of the latest from GitHub, and it never rebases, stashes or changes your
 checkout of the design repository. The panel's sync status shows **Synced** once everything has reached GitHub, and
 **Sync now** pushes at once.
 
